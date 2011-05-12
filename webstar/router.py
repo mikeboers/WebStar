@@ -5,6 +5,10 @@ import hashlib
 class FormatError(ValueError):
     pass
 
+class FormatMatchError(FormatError): pass
+class FormatIncompleteMatchError(FormatError): pass
+class FormatPredicateError(FormatError): pass
+class FormatDataEqualityError(FormatError): pass
 
 class Pattern(object):
 
@@ -138,17 +142,19 @@ class Pattern(object):
 
         x = self.match(out)
         if x is None:
-            raise FormatError('cannot match against output')
+            raise FormatMatchError('final result does not satisfy original pattern')
         m, d = x
         if d:
-            raise FormatError('did not match all output')
+            raise FormatIncompleteMatchError('final result was not fully captured by original pattern')
         
+        # Untested.
         if not self._test_predicates(data):
-            raise FormatError('supplied data does not match predicates')
+            raise FormatPredicateError('supplied data does not satisfy predicates')
         
+        # Untested.
         for k, v in m.iteritems():
             if k in data and data[k] != v:
-                raise FormatError('got different value for %r: got %r, expected %r' % (k, v, data[k]))
+                raise FormatDataEqualityError('re-match resolved different value for %r: got %r, expected %r' % (k, v, data[k]))
 
         return out
 

@@ -1,6 +1,6 @@
 
 from . import *
-from webstar.router import Pattern, FormatError
+from webstar.router import *
 
 class TestPattern(TestCase):
     
@@ -68,9 +68,14 @@ class TestPattern(TestCase):
         s = p.format(number=12)
         self.assertEqual(s, '/0012')
         
-    def test_nitrogen_format_mismatch(self):
-        p = Pattern('/{action:get}/{id:\d+}', _formatters=dict(id=int))
-        self.assertRaises(FormatError, p.format, action='test', id=4)
+    def test_format_mismatch(self):
+        p = Pattern('/{id:\d+}')
+        self.assertRaises(FormatMatchError, p.format, id='notanumber')
+    
+    def test_format_incomplete_rematch(self):
+        p = Pattern('/{segment}')
+        self.assertRaises(FormatIncompleteMatchError, p.format, segment='one/two')
+    
     
     def test_predicate(self):
         p = Pattern('/{upper}', predicates=[lambda data: data['upper'].isupper()])
