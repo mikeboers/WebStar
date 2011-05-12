@@ -29,31 +29,45 @@ class Pattern(object):
         self.predicates = []
         
         # Build predicates for nitrogen-style requirements.
-        requirements = kwargs.pop('_requirements', {})
-        if requirements:
+        nitrogen_requirements = kwargs.pop('_requirements', {})
+        if nitrogen_requirements:
             def make_requirement_predicate(name, regex):
                 req_re = re.compile(regex + '$')
                 def predicate(data):
                     return name in data and req_re.match(data[name])
                 return predicate
-            for name, regex in requirements.iteritems():
+            for name, regex in nitrogen_requirements.iteritems():
                 self.predicates.append(make_requirement_predicate(name, regex))
         
         # Build predicates for nitrogen-style parsers.
-        parsers = kwargs.pop('_parsers', {})
-        if parsers:
+        nitrogen_parsers = kwargs.pop('_parsers', {})
+        if nitrogen_parsers:
             def make_parser_predicate(name, func):
                 def predicate(data):
                     data[name] = func(data[name])
                     return True
                 return predicate
-            for name, func in parsers.iteritems():
+            for name, func in nitrogen_parsers.iteritems():
                 self.predicates.append(make_parser_predicate(name, func))
         
         self.predicates.extend(kwargs.pop('predicates', []))
         
-        self._formatters = kwargs.pop('_formatters', {})
-
+        self.formatters = []
+        
+        nitrogen_formatters = kwargs.pop('_formatters', {})
+        if nitrogen_formatters:
+            def make_bc_formatter(name, func):
+                if isinstance(func, str):
+                    format = func
+                    func = lambda value: format % value
+                def formatter(data):
+                    data[name] = func(data[name])
+                return formatter
+            for name, format in nitrogen_formatters.iteritems():
+                self.formatters.append(make_bc_formatter(name, format))
+        
+        self.formatters.extend(kwargs.pop('formatters', []))
+        
         self._compile()
 
 
@@ -102,24 +116,23 @@ class Pattern(object):
         result = self.constants.copy()
         result.update(m.groupdict())
 
-        for func in self.predicates:
-            if not func(result):
-                return
+        if not self._test_predicates(result):
+            return
 
         return result, value[m.end():]
 
-    def _format_data(self, data):
-        for key, formatter in self._formatters.items():
-            if key in data:
-                if isinstance(formatter, basestring):
-                    data[key] = formatter % data[key]
-                else:
-                    data[key] = formatter(data[key])
-
+    def _test_predicates(self, data):
+        for func in self.predicates:
+            if not func(data):
+                return
+        return True
+    
     def format(self, **kwargs):
         data = self.constants.copy()
         data.update(kwargs)
-        self._format_data(data)
+        
+        for func in self.formatters:
+            func(data)
 
         out = self._format % data
 
@@ -129,6 +142,9 @@ class Pattern(object):
         m, d = x
         if d:
             raise FormatError('did not match all output')
+        
+        if not self._test_predicates(data):
+            raise FormatError('supplied data does not match predicates')
         
         for k, v in m.iteritems():
             if k in data and data[k] != v:

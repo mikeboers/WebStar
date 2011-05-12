@@ -40,7 +40,7 @@ class TestPattern(TestCase):
             action='edit',
         ))
     
-    def test_requirements(self):
+    def test_nitrogen_requirements(self):
         p = Pattern('/{id}', _requirements=dict(id=r'\d+'))
         m = p.match('/12')
         self.assertNotEqual(m, None)
@@ -48,22 +48,27 @@ class TestPattern(TestCase):
         m = p.match('/edit/12')
         self.assertNotEqual(m, None)
     
-    def test_requirement_miss(self):
+    def test_nitrogen_requirement_miss(self):
         p = Pattern('/{id}', _requirements=dict(id=r'/d+'))
         m = p.match('/notanumber')
         self.assertEqual(m, None)
     
-    def test_parsers(self):
+    def test_nitrogen_parsers(self):
         p = Pattern('/{id}', _parsers=dict(id=int))
         data, path = p.match('/12')
         self.assertEqual(data, dict(id=12))
     
-    def test_formatters(self):
+    def test_nitrogen_formatters(self):
         p = Pattern('/{method:[A-Z]+}', _formatters=dict(method=str.upper))
         s = p.format(method='get')
         self.assertEqual(s, '/GET')
+    
+    def test_nitrogen_format_string(self):
+        p = Pattern('/{number:\d+}', _formatters=dict(number='%04d'))
+        s = p.format(number=12)
+        self.assertEqual(s, '/0012')
         
-    def test_format_mismatch(self):
+    def test_nitrogen_format_mismatch(self):
         p = Pattern('/{action:get}/{id:\d+}', _formatters=dict(id=int))
         self.assertRaises(FormatError, p.format, action='test', id=4)
     
