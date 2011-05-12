@@ -13,12 +13,17 @@ class FormatDataEqualityError(FormatError): pass
 class Pattern(object):
 
     default_pattern = '[^/]+'
+    default_format = 's'
+    
     token_re = re.compile(r'''
-        {                           # start of keyword match
-        ([a-zA-Z_]\w*)              # group 1: name
-        (?::(                       # colon and group 2: pattern
-        [^}\\]*(?:\\.[^}\\]*)*      # zero or more chars. } can be escaped.
-        ))?                         # the colon and pattern are optional
+        {                            
+        ([a-zA-Z_]\w*)               # group 1: name
+        (?::                         # colon and group 2: pattern
+          ([^:}\\]*(?:\\.[^:}\\]*)*) # zero or more chars. } can be escaped (untested)
+          (?::                       # colon and group 3: format string
+            ([^}\\]*(?:\\.[^}\\]*)*) # zero or more chars. } can be escaped (untested)
+          )?
+        )?
         }
     ''', re.X)
 
@@ -81,31 +86,28 @@ class Pattern(object):
 
     def _compile(self):
 
-        self._hash_to_key = {}
-        self._hash_to_pattern = {}
+        self._segments = {}
 
         format = self.token_re.sub(self._compile_sub, self._raw)
-
         pattern = re.escape(format)
-        for hash, patt in self._hash_to_pattern.items():
-            pattern = pattern.replace(hash, patt, 1)
-
-        for hash, key in self._hash_to_key.items():
-            format = format.replace(hash, '%%(%s)s' % key, 1)
+        
+        for hash, (key, patt, form) in self._segments.items():
+            pattern = pattern.replace(hash, '(?P<%s>%s)' % (key, patt), 1)
+            format  = format.replace(hash, '%%(%s)%s' % (key, form), 1)
 
         self._format = format
+        print pattern
         self._compiled = re.compile(pattern + r'(?=/|$)')
 
-        del self._hash_to_key
-        del self._hash_to_pattern
+        del self._segments
 
     def _compile_sub(self, match):
         name = match.group(1)
         self._keys.add(name)
         patt = match.group(2) or self.default_pattern
+        form = match.group(3) or self.default_format
         hash = 'x%s' % hashlib.md5(name).hexdigest()
-        self._hash_to_key[hash] = name
-        self._hash_to_pattern[hash] = '(?P<%s>%s)' % (name, patt)
+        self._segments[hash] = (name, patt, form)
         return hash
 
     def match(self, value):

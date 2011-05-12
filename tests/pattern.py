@@ -84,4 +84,10 @@ class TestPattern(TestCase):
         m = p.match('/lower')
         self.assertEqual(m, None)
     
+    def test_format_string(self):
+        p = Pattern(r'/{year:\d+:04d}', _parsers=dict(year=int))
+        data, path = p.match('/2012')
+        self.assertEqual(data, dict(year=2012))
+        s = p.format(year=12)
+        self.assertEqual(s, '/0012')
     
