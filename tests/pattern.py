@@ -42,8 +42,11 @@ class TestPattern(TestCase):
     
     def test_requirements(self):
         p = Pattern('/{id}', _requirements=dict(id=r'\d+'))
-        data, path = p.match('/12')
-        self.assertEqual(data, dict(id='12'))
+        m = p.match('/12')
+        self.assertNotEqual(m, None)
+        p = Pattern('/{mode}/{id}', _requirements=dict(mode='edit', id=r'\d+'))
+        m = p.match('/edit/12')
+        self.assertNotEqual(m, None)
     
     def test_requirement_miss(self):
         p = Pattern('/{id}', _requirements=dict(id=r'/d+'))
@@ -63,4 +66,12 @@ class TestPattern(TestCase):
     def test_format_mismatch(self):
         p = Pattern('/{action:get}/{id:\d+}', _formatters=dict(id=int))
         self.assertRaises(FormatError, p.format, action='test', id=4)
+    
+    def test_predicate(self):
+        p = Pattern('/{upper}', predicates=[lambda data: data['upper'].isupper()])
+        m = p.match('/UPPER')
+        self.assertNotEqual(m, None)
+        m = p.match('/lower')
+        self.assertEqual(m, None)
+    
     

@@ -1,6 +1,6 @@
-
 import re
 import hashlib
+
 
 class FormatError(ValueError):
     pass
@@ -21,14 +21,37 @@ class Pattern(object):
     def __init__(self, raw, **kwargs):
 
         self._raw = raw
-        self._constants = kwargs
         self._keys = set()
-
-        self._requirements = kwargs.pop('_requirements', {})
-        self._requirements = dict((k, re.compile(v + '$'))
-            for k, v in self._requirements.items())
-
-        self._parsers = kwargs.pop('_parsers', {})
+        
+        self.constants = kwargs
+        self.constants.update(kwargs.pop('constants', {}))
+        
+        self.predicates = []
+        
+        # Build predicates for nitrogen-style requirements.
+        requirements = kwargs.pop('_requirements', {})
+        if requirements:
+            def make_requirement_predicate(name, regex):
+                req_re = re.compile(regex + '$')
+                def predicate(data):
+                    return name in data and req_re.match(data[name])
+                return predicate
+            for name, regex in requirements.iteritems():
+                self.predicates.append(make_requirement_predicate(name, regex))
+        
+        # Build predicates for nitrogen-style parsers.
+        parsers = kwargs.pop('_parsers', {})
+        if parsers:
+            def make_parser_predicate(name, func):
+                def predicate(data):
+                    data[name] = func(data[name])
+                    return True
+                return predicate
+            for name, func in parsers.iteritems():
+                self.predicates.append(make_parser_predicate(name, func))
+        
+        self.predicates.extend(kwargs.pop('predicates', []))
+        
         self._formatters = kwargs.pop('_formatters', {})
 
         self._compile()
@@ -74,23 +97,16 @@ class Pattern(object):
 
         m = self._compiled.match(value)
         if not m:
-            return None
+            return
 
-        result = self._constants.copy()
+        result = self.constants.copy()
         result.update(m.groupdict())
 
-        for key, pattern in self._requirements.items():
-            if not key in result or not pattern.match(result[key]):
-                return None
-
-        self._parse_data(result)
+        for func in self.predicates:
+            if not func(result):
+                return
 
         return result, value[m.end():]
-
-    def _parse_data(self, data):
-        for key, callback in self._parsers.items():
-            if key in data:
-                data[key] = callback(data[key])
 
     def _format_data(self, data):
         for key, formatter in self._formatters.items():
@@ -101,7 +117,7 @@ class Pattern(object):
                     data[key] = formatter(data[key])
 
     def format(self, **kwargs):
-        data = self._constants.copy()
+        data = self.constants.copy()
         data.update(kwargs)
         self._format_data(data)
 
@@ -113,9 +129,7 @@ class Pattern(object):
         m, d = x
         if d:
             raise FormatError('did not match all output')
-
-        self._parse_data(data)
-
+        
         for k, v in m.iteritems():
             if k in data and data[k] != v:
                 raise FormatError('got different value for %r: got %r, expected %r' % (k, v, data[k]))
