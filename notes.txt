@@ -1,0 +1,177 @@
+
+route patterns
+---------------
+
+We will maintain the leading slash on the paths to match. This allows for the
+distinction bettween directory requests ('/$') and consumed paths ('^$').
+
+Kwargs snap_back=True and default_pattern='[^/]+' allow for control to make it more "raw". We are going to dump the full RawReRouter which only really gets us positional matches, and re.search (instead of re.match; ie. we must always match the front of a path).
+
+Can specify a printf-style format for substitution as well:
+    {name:re:format} -> {id:\d+:%4d}
+
+Default data should be passed in via kwarg "defaults", but we will continue to accept all unused kwargs.
+
+route naming
+-------------
+
+Every single node will have a name (passed as the first positional argument), although some of them may be silly (ie. their `id`). We can route by route name with glob pattern matching ('*' for any segment), relative from a context router with '..' and '.', etc.
+
+Url generation will first use any name segments to determine which nodes to use, and then will use data-based-discovery to find the best match (which is what we are already doing).
+
+- use posixpath.join and posixpath.normpath to do the heavy lifting
+
+route history
+----------------
+
+
+The routing history is much simpler in webstar vs nitrogen; environ['webstar.history'] will be a list of dicts which contains a couple of special keys, namely:
+
+    - __router__ -> The node which did this.
+    - __pathinfo__ -> The remaining pathinfo after a route
+    - __consumed__ (optional) -> The segment that was popped off __pathinfo__
+
+The first dict will ONLY contain __router__ and __pathinfo__.
+
+A simpler version of the data (only the matched data) will be stored in environ['wsgi.routing_args'][1]
+
+
+- ForkRouter should store fork index into data as well
+
+
+    
+predicates & formatters
+-------------------------
+
+Predicates are functions which are handed the data dict from the pattern, and
+must return True if the match is okay. Predicates are able to mutate the data
+dict (to parse raw data into dates, ints, etc.).
+
+    def mapper(func, *names, all=False):
+        def _mapper(data):
+            try:
+                mapped = {}
+                for name in names + (data.keys() if all else []):
+                    mapped[name] = func(data[name])
+                data.mapped(ints)
+                return True
+            except ValueError:
+                return False
+        _mapper.__name__ = 'mapper<%r, %r>' % (func, names)
+        return _mapper
+
+Formatters are functions which are handed the data dict and are to mutate them
+into their raw URI representation.
+
+    def clean_names(*names, all=False):
+        def _clean_names(data):
+            for name in names + (data.keys() if all else []):
+                data[name] = re.sub(r'\W+', '-', data[name])
+        return _clean_names
+
+Existing parsers/formatters/requirements will be converted to new-style predicates internally.
+
+- perhaps pass wsgi environ as well?
+    - then environ['webstar.history'] would be availible
+    - then we could make repoze.what predicate adapters by throwing a 401
+    def predicate(environ, data): ...
+- should we be catching any/all exceptions during the predicate phase, or should they crash the whole request?
+    - they should crash the whole request
+
+unsorted
+---------
+
+Routers will now recognize themselves via inheritance from a RouterInterface.
+
+
+All the different router types can be represented on one Router class:
+    - a router has a list of patterns to match against
+    - ReRouter is this default functionality
+    - ChainRouter would be empty patterns (that always match)
+    - Module router would add all modules as patterns    
+        - add_package_routes(__name__) to import all modules in a package
+            - if recursive=True, then find all
+            - scans for all things tagged as being a router via a basic
+              `route` decorator
+                
+                def route(name, pattern, func=None, **kwargs):
+                    if func:
+                        func.__dict__.setdefault('__route_args__', []).append(kwargs)
+                    else:
+                        return functools.partial(route, **kwargs)
+            - override get_module_entrypoints to override the scan behavior
+                - should return route args/kwargs and the destination
+
+
+The entire graph will be "scanned" loading all modules
+and determining all possible paths. The purpose of the scan is not to
+create a list of every possible route, but to get a complete graph of
+every possible router.
+    - can use pkgutil.walk_packages to do this, or venusian
+    - must either be done in __init__ or run manually before a match
+        - autoscan=True on all Routers
+        - _scanned must be True before a match
+        - scan() method on all Routers, shortcuts with no error if already
+          scanned
+
+
+
+ReRouters can break down patterns into path segments of plaintext and
+pattern (by comparing segments to their re.escape-ed value), and build a
+regex trie for efficiency (although this was concieved when going to a
+single router setup instead of a graph where there were potentially many
+routes to test)
+
+- should context kwargs to url_for remain local to the routers which
+  generated them, or shall we switch to them being completely global
+	- routes / Pyramid / many others will all be global
+	- is there a way for us to specify if we want global, local, 'inherit', or no "memory"
+	    _memory='global' -> all data availible to all nodes
+	    _memory='local' -> only data generated by node originally is availible
+	    _memory='inherit' -> what we have now
+	    _memory='None' -> just the new data
+
+
+- consider moving primary routing algos off of the routers themselves. Then it makes more sense that replacing them in child classes doesn't actually do anything.
+
+
+- trailing slash on the pattern marks as a branch, not a leaf
+	a request to a branch without a slash redirects to the slashed version
+	(as that is the canonical one)
+
+	- ModuleRouter(s) are a branch, not a leaf
+	- even if the ReRouter consumes the slash on the end, a slash will
+	  still be passed to the next router
+
+- the primary routing function should take the route and immediately
+  generate a URL from it to see if it matches. if it does match, it is the
+  canonical route, and let it go through. if it doesnt generate then the
+  definition is incomplete. if it generates to something else then go
+  through the routing/generating process until 1) we get a canonical route,
+  then redirect to it 2) we cannot route/generate 3) we generate a url we
+  have already routed in this pass, and call it an incomplete definition
+
+    - can use one of the redirects that has the browser redo the same
+      request with the same mode and everything (with the same data as
+      well, I think...) (this would be a 307)
+    - normalize the request before it even hits the routing algo, then do
+      a redirect at the end
+
+
+- in the docs specify that the routing tree is must be a DAG. We may not
+actually go about asserting this, but it is a good idea.
+
+  - SignedGateway could be installed optionally by:
+      >>> main = ReRouter(...)
+      >>> gate = SignedGateway(main, ...)
+      >>> __app__ = Chain([gate, main])
+
+      This is still a DAG.
+
+
+- is there actually any requirement to store the unrouted path as part of
+the route, or can I just keep the routers, args and kwargs they spit off?
+I think the only thing I'm using it for now is to build up the SCRIPT_NAME
+in the __call__ method, but I could just do this in the route method. OR
+use the regenerated part to figure this out
+
