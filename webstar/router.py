@@ -6,6 +6,7 @@ import logging
 import os
 import posixpath
 import re
+import sys
 
 from . import core
 from .pattern import Pattern, FormatError
@@ -47,7 +48,11 @@ class Router(core.RouterInterface):
         if isinstance(package, basestring):
             package = __import__(package)
         module_names = set()
+        
+        # Look for unloaded modules.
         for directory in package.__path__:
+            if not os.path.exists(directory):
+                continue
             for name in os.listdir(directory):
                 if not (name.endswith('.py') or name.endswith('.pyc')):
                     continue
@@ -55,16 +60,28 @@ class Router(core.RouterInterface):
                 if name == '__init__':
                     continue
                 module_names.add(name)
+        
+        # Look for already imported modules; essentially for testing.
+        for name in sys.modules:
+            if name.startswith(package.__name__ + '.'):
+                module_names.add(name[len(package.__name__)+1:].split('.', 1)[0])
+        
         for name in sorted(module_names):
             try:
                 module = __import__(package.__name__ + '.' + name, fromlist=['hack'])
             except ImportError:
                 log.warn('could not import %r; skipping' % (package.__name__ + '.' + name))
             else:
-                self.register_module(
-                    core.normalize_path(pattern, name),
-                    module
-                )
+                subpattern = core.normalize_path(pattern, name)
+                if recursive and (
+                    hasattr(module, '__path__') or
+                    module.__file__.endswith('/__import__.py') or
+                    module.__file__.endswith('/__import__.pyc')
+                ):
+                    self.register_package(subpattern, module)
+                else:
+                    self.register_module(subpattern, module)
+        
         self.register_module(pattern, package)
     
     def register_module(self, pattern, module):

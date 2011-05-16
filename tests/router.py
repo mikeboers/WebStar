@@ -7,9 +7,6 @@ from webstar.pattern import FormatMatchError
 
 class TestRouterBasics(TestCase):
     
-    def autostart(self, environ, start):
-        start('200 OK', [('Content-Type', 'text-plain')])
-    
     def setUp(self):
         self.router = Router()
         self.app = TestApp(self.router)
@@ -61,10 +58,34 @@ class TestRouterBasics(TestCase):
         self.assertRaises(FormatMatchError, self.router.url_for, fruit='carrot')
 
 
-class TestModules(TestCase):
+class TestDummyModules(TestCase):
     
-    def autostart(self, environ, start):
-        start('200 OK', [('Content-Type', 'text-plain')])
+    def setUp(self):
+        root = DummyModule('dummy')
+        root.__app__ = EchoApp('/dummy')
+        a = root('a')
+        a.__app__ = EchoApp('/dummy/A')
+        b = root('b')
+        b.__app__ = EchoApp('/dummy/B')
+        
+        self.router = Router()
+        self.router.register_package('', root)
+        self.app = TestApp(self.router)
+        
+    def tearDown(self):
+        DummyModule.remove_all()
+    
+    def test_basic(self):
+        res = self.app.get('/')
+        self.assertEqual(res.body, '/dummy')
+        res = self.app.get('/a')
+        self.assertEqual(res.body, '/dummy/A')
+        res = self.app.get('/b')
+        self.assertEqual(res.body, '/dummy/B')
+    
+
+class TestRealModules(TestCase):
+    
     
     def setUp(self):
         self.router = Router()

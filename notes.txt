@@ -81,6 +81,7 @@ Existing parsers/formatters/requirements will be converted to new-style predicat
 unsorted
 ---------
 
+get environ into predicates
 
 Change "_priority" to "priority".
 
@@ -89,6 +90,7 @@ Discovery of routes on modules:
 	
 
 register_package(..., recursive=True)
+register package should also look in sys.modules for direct children
 
 webstar.nitrogen should have extensions for nitrogen to match previous functionality
 
