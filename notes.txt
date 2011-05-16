@@ -81,8 +81,13 @@ Existing parsers/formatters/requirements will be converted to new-style predicat
 unsorted
 ---------
 
+Router.default_app should be called when routing doesn't work.
+
+Nearly all WSGI functionality should be abstracted away so that Nitrogen will be the one writing it's own middleware, and throwing its own 404.
+
 Routers will now recognize themselves via inheritance from a RouterInterface.
 
+Change "_priority" to "priority".
 
 All the different router types can be represented on one Router class:
     - a router has a list of patterns to match against

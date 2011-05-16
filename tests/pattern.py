@@ -1,6 +1,6 @@
 
 from . import *
-from webstar.router import *
+from webstar.pattern import *
 
 class TestPattern(TestCase):
     
@@ -75,7 +75,6 @@ class TestPattern(TestCase):
     def test_format_incomplete_rematch(self):
         p = Pattern('/{segment}')
         self.assertRaises(FormatIncompleteMatchError, p.format, segment='one/two')
-    
     
     def test_predicate(self):
         p = Pattern('/{upper}', predicates=[lambda data: data['upper'].isupper()])
