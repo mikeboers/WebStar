@@ -34,7 +34,7 @@ class Route(list):
             return cls(environ.get('PATH_INFO', ''))
         return obj
     
-    def __init__(self, path):
+    def __init__(self, path, steps):
         self.append(RouteStep(
             unrouted=path,
             next=None,
@@ -42,6 +42,7 @@ class Route(list):
             data={},
             router=None,
         ))
+        self.extend(steps)
     
     def url_for(self, _strict=True, **data):
         for i, chunk in enumerate(self):
@@ -128,19 +129,11 @@ class RouterInterface(object):
         If strict, a router that can't route a step will result in a raised
         RoutingError exception.
         
-        """
-        
-        log.debug('starting to route %r:' % path)
-        steps = 0
-        route = Route(path)
-        router = self
-        
+        """    
         steps = self._route(self, path)
         if not steps:
             return
-        route.extend(steps)
-            
-        return route
+        return Route(path, steps)
     
     def _route(self, node, path):
         log.debug('_route: %r, %r' % (node, path))
