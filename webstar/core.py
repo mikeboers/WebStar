@@ -30,14 +30,6 @@ RouteStep = collections.namedtuple('RouteStep', 'next consumed unrouted data rou
 
 class Route(list):
     
-    @classmethod
-    def from_environ(cls, environ):
-        """Gets the list of routing history from the environ."""
-        obj = environ.get(HISTORY_ENVIRON_KEY)
-        if not obj:
-            return cls(environ.get('PATH_INFO', ''))
-        return obj
-    
     def __init__(self, path, steps):
         self.append(RouteStep(
             unrouted=path,
@@ -82,8 +74,9 @@ class Route(list):
 
 
 def get_route_data(environ):
-    route = Route.from_environ(environ)
+    route = environ.get(HISTORY_ENVIRON_KEY, None)
     return route.data if route else {}
+
 
 class GenerationError(ValueError):
     def __init__(self, path, router, data):
@@ -100,11 +93,11 @@ class RouterInterface(object):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
     def route_step(self, path):
-        """Return RouteStep, or None if the path can't be routed."""
+        """Yield a RouteStep for each possible route from this node."""
         raise NotImplementedError()
     
     def generate_step(self, data):
-        """Return GenerateStep, or None if a segment can't be generated."""
+        """Yield a GenerateStep for each possible route from this node."""
         raise NotImplementedError()
         
     
