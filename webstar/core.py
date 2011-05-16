@@ -51,6 +51,10 @@ class History(list):
             if chunk.router is not None:
                 return chunk.router.generate(data, history=self[i:], strict=_strict)
     
+    @property
+    def consumed(self):
+        return ''.join(x.consumed or '' for x in self)
+    
     def __repr__(self):
         return '<%s:%s>' % (self.__class__.__name__, list.__repr__(self))
         
@@ -73,22 +77,6 @@ def get_route_data(environ):
     for chunk in history:
         data.update(chunk.data)
     return data
-
-
-def simple_diff(before, after):
-    """Return the prefix that was removed at step i, or None if it was not
-    a simple refix removal.
-    
-    Examples:
-        >>> simple_diff('/one/two', '/two')
-        '/one'
-        
-        >>> simple_diff('/one/two', '/three')
-    
-    """
-    if not before.endswith(after):
-        return None
-    return before[:-len(after)] if after else before
 
 
 class RoutingError(ValueError):
@@ -181,9 +169,7 @@ class Router(object):
         
         environ[HISTORY_ENVIRON_KEY] = route.history
         environ['PATH_INFO'] = route.unrouted
-        environ['SCRIPT_NAME'] = environ.get('SCRIPT_NAME', '') + ''.join(
-            x.consumed or '' for x in route.history
-        )
+        environ['SCRIPT_NAME'] = environ.get('SCRIPT_NAME', '') + route.history.consumed
         
         return route.app(environ, start)
     

@@ -45,12 +45,13 @@ class Router(core.Router):
         for _, pattern, app in self._apps:
             m = pattern.match(path)
             if m:
-                kwargs, unrouted = m
+                data, unrouted = m
+                log.debug(m)
                 return core.RouteStep(
                     next=app,
-                    consumed=path[:-len(unrouted)],
+                    consumed=path[:-len(unrouted)] if unrouted else path,
                     unrouted=unrouted,
-                    data=kwargs
+                    data=data
                 )
 
     def generate_step(self, data):

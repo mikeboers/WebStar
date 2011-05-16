@@ -17,7 +17,7 @@ class TestRouterBasics(TestCase):
         @self.router.register('/static')
         def static(environ, start):
             self.autostart(environ, start)
-            return ['static response']
+            return ['static; path_info=%(PATH_INFO)r, script_name=%(SCRIPT_NAME)r' % environ]
         
         @self.router.register('/{fruit:apple|banana}')
         def fruit(environ, start):
@@ -35,7 +35,11 @@ class TestRouterBasics(TestCase):
         
     def test_static(self):
         res = self.app.get('/static')
-        self.assertEqual(res.body, 'static response')
+        self.assertEqual(res.body, "static; path_info='', script_name='/static'")
+    
+    def test_static_incomplete(self):
+        res = self.app.get('/static/more')
+        self.assertEqual(res.body, "static; path_info='/more', script_name='/static'")
     
     def test_basic_re(self):
         res = self.app.get('/apple')
