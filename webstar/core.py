@@ -24,7 +24,7 @@ def normalize_path(*segments):
         return ''
     return '/' + posixpath.normpath(path).lstrip('/')
 
-class History(list):
+class Route(list):
     
     @classmethod
     def from_environ(cls, environ):
@@ -52,23 +52,35 @@ class History(list):
     def consumed(self):
         return ''.join(x.consumed or '' for x in self)
     
+    @property
+    def app(self):
+        return self[-1].next
+    
+    @property
+    def history(self):
+        return self
+    
+    @property
+    def unrouted(self):
+        return self[-1].unrouted
+    
+    @property
+    def data(self):
+        data = {}
+        for step in self:
+            data.update(step.data)
+        return data
+    
     def __repr__(self):
         return '<%s:%s>' % (self.__class__.__name__, list.__repr__(self))
         
 
-Route = collections.namedtuple('Route', 'history app unrouted'.split())
 GenerateStep = collections.namedtuple('GenerateStep', 'segment next'.split())
-
 RouteStep = collections.namedtuple('RouteStep', 'next consumed unrouted data router')
 
 def get_route_data(environ):
-    history = History.from_environ(environ)
-    if not history:
-        return {}
-    data = {}
-    for chunk in history:
-        data.update(chunk.data)
-    return data
+    route = Route.from_environ(environ)
+    return route.data if route else {}
 
 
 class RoutingError(ValueError):
@@ -120,19 +132,15 @@ class RouterInterface(object):
         
         log.debug('starting to route %r:' % path)
         steps = 0
-        history = History(path)
+        route = Route(path)
         router = self
         
         steps = self._route(self, path)
         if not steps:
             return
-        history.extend(steps)
+        route.extend(steps)
             
-        return Route(
-                history=history,
-                app=steps[-1].next,
-                unrouted=steps[-1].unrouted
-            )
+        return route
     
     def _route(self, node, path):
         log.debug('_route: %r, %r' % (node, path))
