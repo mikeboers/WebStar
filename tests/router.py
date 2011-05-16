@@ -60,3 +60,20 @@ class TestRouterBasics(TestCase):
         self.assertEqual(path, '/apple')
         self.assertRaises(FormatMatchError, self.router.url_for, fruit='carrot')
 
+
+class TestModules(TestCase):
+    
+    def autostart(self, environ, start):
+        start('200 OK', [('Content-Type', 'text-plain')])
+    
+    def setUp(self):
+        self.router = Router()
+        self.app = TestApp(self.router)
+        from . import examplepackage
+        self.router.register_package('', examplepackage)
+        
+    def test_default(self):
+        res = self.app.get('/')
+        self.assertEqual(res.body, 'package.__init__')
+
+

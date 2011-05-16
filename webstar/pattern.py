@@ -96,7 +96,6 @@ class Pattern(object):
             format  = format.replace(hash, '%%(%s)%s' % (key, form), 1)
 
         self._format = format
-        print pattern
         self._compiled = re.compile(pattern + r'(?=/|$)')
 
         del self._segments

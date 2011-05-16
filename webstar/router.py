@@ -3,6 +3,8 @@ import collections
 import functools
 import hashlib
 import logging
+import os
+import posixpath
 import re
 
 from . import core
@@ -41,12 +43,38 @@ class Router(core.Router):
         # work later.
         return functools.partial(self.register, pattern, **kwargs)
 
+    def register_package(self, pattern, package, recursive=False):
+        if isinstance(package, basestring):
+            package = __import__(package)
+        module_names = set()
+        for directory in package.__path__:
+            for name in os.listdir(directory):
+                if not (name.endswith('.py') or name.endswith('.pyc')):
+                    continue
+                name = name.rsplit('.', 1)[0]
+                if name == '__init__':
+                    continue
+                module_names.add(name)
+        for name in sorted(module_names):
+            try:
+                module = __import__(package.__name__ + '.' + name)
+            except ImportError:
+                log.warn('could not import %r' % (package.__name__ + '.' + name))
+            else:
+                self.register_module(
+                    core.normalize_path(pattern, name),
+                    module
+                )
+        self.register_module(pattern, package)
+    
+    def register_module(self, pattern, module):
+        self.register(pattern, ModuleRouter(module))
+    
     def route_step(self, path):
         for _, pattern, app in self._apps:
             m = pattern.match(path)
             if m:
                 data, unrouted = m
-                log.debug(m)
                 return core.RouteStep(
                     next=app,
                     consumed=path[:-len(unrouted)] if unrouted else path,
@@ -55,7 +83,7 @@ class Router(core.Router):
                 )
 
     def generate_step(self, data):
-        log.debug('generate_step(%r, %r)' % (self, data))
+        # log.debug('generate_step(%r, %r)' % (self, data))
         for _, pattern, app in self._apps:
             # Skip patterns that are not identifiable.
             if not (pattern._keys or pattern.constants):
@@ -72,6 +100,43 @@ class Router(core.Router):
 
 
 
+class ModuleRouter(Router):
 
+    def __init__(self, module, reload=False):
+        self.module = module
+        self.reload = reload
+        self._last_mtime = self.getmtime()
+        self._scanned = False
+        
+    def getmtime(self):
+        return os.path.getmtime(self.module.__file__)
+
+    def _assert_scanned(self):
+        if self.reload:
+            mtime = self.getmtime()
+            if self._last_mtime != mtime:
+                self._last_mtime = mtime
+                self._app = None
+                log.debug('reloading module %r' % self.module.__name__)
+                reload(self.module)
+                self._scanned = False
+        if not self._scanned:
+            self._apps = []
+            main = getattr(self.module, '__app__', None)
+            if main:
+                self.register('', main)
+        
+    def route_step(self, path):
+        self._assert_scanned()
+        return super(ModuleRouter, self).route_step(path)
+
+    def generate_step(self, data): 
+        self._assert_scanned()
+        return super(ModuleRouter, self).generate_step(data)
+
+    def __repr__(self):
+        return '<%s.%s of %s>' % (self.__class__.__module__, self.__class__.__name__, self.module.__name__)
+
+    
 
 

@@ -18,6 +18,12 @@ log = logging.getLogger(__name__)
 HISTORY_ENVIRON_KEY = 'webstar.route.history'
 
 
+def normalize_path(*segments):
+    path = '/'.join(x for x in segments if x)
+    if not path:
+        return ''
+    return '/' + posixpath.normpath(path).lstrip('/')
+
 class History(list):
     
     @classmethod
@@ -34,13 +40,8 @@ class History(list):
     def update(self, unrouted, consumed=None, router=None, data=None):
         """Sets the current unrouted path and adds to routing history."""
         
-        if not unrouted:
-            unrouted = ''
-        else:
-            unrouted = '/' + posixpath.normpath(unrouted.lstrip('/'))
-        
         self.append(HistoryChunk(
-            unrouted=unrouted,
+            unrouted=normalize_path(unrouted),
             consumed=consumed,
             router=router,
             data=data
