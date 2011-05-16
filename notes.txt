@@ -21,24 +21,6 @@ Url generation will first use any name segments to determine which nodes to use,
 
 - use posixpath.join and posixpath.normpath to do the heavy lifting
 
-route history
-----------------
-
-
-The routing history is much simpler in webstar vs nitrogen; environ['webstar.history'] will be a list of dicts which contains a couple of special keys, namely:
-
-    - __router__ -> The node which did this.
-    - __pathinfo__ -> The remaining pathinfo after a route
-    - __consumed__ (optional) -> The segment that was popped off __pathinfo__
-
-The first dict will ONLY contain __router__ and __pathinfo__.
-
-A simpler version of the data (only the matched data) will be stored in environ['wsgi.routing_args'][1]
-
-
-- ForkRouter should store fork index into data as well
-
-
     
 predicates & formatters
 -------------------------
@@ -81,6 +63,9 @@ Existing parsers/formatters/requirements will be converted to new-style predicat
 unsorted
 ---------
 
+constants for module names
+	data_key='module'
+
 get environ into predicates
 
 Change "_priority" to "priority".
@@ -112,17 +97,6 @@ All the different router types can be represented on one Router class:
             - override get_module_entrypoints to override the scan behavior
                 - should return route args/kwargs and the destination
 
-
-The entire graph will be "scanned" loading all modules
-and determining all possible paths. The purpose of the scan is not to
-create a list of every possible route, but to get a complete graph of
-every possible router.
-    - can use pkgutil.walk_packages to do this, or venusian
-    - must either be done in __init__ or run manually before a match
-        - autoscan=True on all Routers
-        - _scanned must be True before a match
-        - scan() method on all Routers, shortcuts with no error if already
-          scanned
 
 
 
@@ -177,11 +151,4 @@ actually go about asserting this, but it is a good idea.
       >>> __app__ = Chain([gate, main])
 
       This is still a DAG.
-
-
-- is there actually any requirement to store the unrouted path as part of
-the route, or can I just keep the routers, args and kwargs they spit off?
-I think the only thing I'm using it for now is to build up the SCRIPT_NAME
-in the __call__ method, but I could just do this in the route method. OR
-use the regenerated part to figure this out
 

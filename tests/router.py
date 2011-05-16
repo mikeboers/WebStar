@@ -55,7 +55,7 @@ class TestRouterBasics(TestCase):
     def test_gen_mismatch(self):
         path = self.router.url_for(fruit='apple')
         self.assertEqual(path, '/apple')
-        self.assertRaises(FormatMatchError, self.router.url_for, fruit='carrot')
+        self.assertRaises(GenerationError, self.router.url_for, fruit='carrot')
 
 
 class TestDummyModules(TestCase):

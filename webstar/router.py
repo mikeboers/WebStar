@@ -108,18 +108,22 @@ class Router(core.RouterInterface):
     def generate_step(self, data):
         # log.debug('generate_step(%r, %r)' % (self, data))
         for _, pattern, node in self._apps:
+            
             # Skip patterns that are not identifiable.
             if not (pattern._keys or pattern.constants):
                 continue
-            # Filter out unmatching constant data.
+            
+            # Filter out mismatched constant data.
             if any(k in data and data[k] != v for k, v in
                 pattern.constants.iteritems()):
                 continue
+            
             try:
-                yield core.GenerateStep(segment=pattern.format(**data), head=node)
-            except KeyError:
+                segment = pattern.format(**data)
+            except FormatError:
                 pass
-                # log.exception('KeyError while generating')
+            else:    
+                yield core.GenerateStep(segment=segment, head=node)
 
 
 

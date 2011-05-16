@@ -2,13 +2,14 @@ import re
 import hashlib
 
 
-class FormatError(ValueError):
+class FormatError(Exception):
     pass
 
-class FormatMatchError(FormatError): pass
-class FormatIncompleteMatchError(FormatError): pass
-class FormatPredicateError(FormatError): pass
-class FormatDataEqualityError(FormatError): pass
+class FormatKeyError(FormatError, KeyError): pass
+class FormatMatchError(FormatError, ValueError): pass
+class FormatIncompleteMatchError(FormatError, ValueError): pass
+class FormatPredicateError(FormatError, ValueError): pass
+class FormatDataEqualityError(FormatError, ValueError): pass
 
 class Pattern(object):
 
@@ -139,8 +140,11 @@ class Pattern(object):
         for func in self.formatters:
             func(data)
 
-        out = self._format % data
-
+        try:
+            out = self._format % data
+        except KeyError as e:
+            raise FormatKeyError(*e.args)
+        
         x = self.match(out)
         if x is None:
             raise FormatMatchError('final result does not satisfy original pattern')

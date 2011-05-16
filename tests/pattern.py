@@ -97,3 +97,9 @@ class TestPattern(TestCase):
         self.assertEqual(dict(x='ccc'), p.match('/ccc')[0])
         self.assertEqual(None, p.match('/dddd'))
     
+    def test_format_key_error(self):
+        p = Pattern(r'/{key}')
+        self.assertEqual(p.format(key='value'), '/value')
+        self.assertRaises(KeyError, p.format, notakey='value')
+        self.assertRaises(FormatKeyError, p.format, notakey='value')
+
