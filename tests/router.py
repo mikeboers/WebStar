@@ -61,27 +61,45 @@ class TestRouterBasics(TestCase):
 class TestDummyModules(TestCase):
     
     def setUp(self):
-        root = DummyModule('dummy')
+        root = self.root = DummyModule('dummy')
         root.__app__ = EchoApp('/dummy')
         a = root('a')
         a.__app__ = EchoApp('/dummy/A')
         b = root('b')
         b.__app__ = EchoApp('/dummy/B')
-        
-        self.router = Router()
-        self.router.register_package('', root)
-        self.app = TestApp(self.router)
+        leaf = b('leaf')
+        leaf.__app__ = EchoApp('/dummy/B/leaf')
         
     def tearDown(self):
         DummyModule.remove_all()
     
     def test_basic(self):
+        router = Router()
+        router.register_package('', self.root)
+        self.app = TestApp(router)
+        
         res = self.app.get('/')
         self.assertEqual(res.body, '/dummy')
         res = self.app.get('/a')
         self.assertEqual(res.body, '/dummy/A')
         res = self.app.get('/b')
         self.assertEqual(res.body, '/dummy/B')
+        res = self.app.get('/b/leaf')
+        self.assertEqual(res.body, '/dummy/B')
+        
+    def test_recursive(self):
+        router = Router()
+        router.register_package('', self.root, recursive=True)
+        self.app = TestApp(router)
+
+        res = self.app.get('/')
+        self.assertEqual(res.body, '/dummy')
+        res = self.app.get('/a')
+        self.assertEqual(res.body, '/dummy/A')
+        res = self.app.get('/b')
+        self.assertEqual(res.body, '/dummy/B')
+        res = self.app.get('/b/leaf')
+        self.assertEqual(res.body, '/dummy/B/leaf')
     
 
 class TestRealModules(TestCase):
