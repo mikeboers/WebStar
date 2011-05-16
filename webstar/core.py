@@ -37,7 +37,11 @@ class History(list):
             data -- A mapping of data extracted from the route for this chunk.
 
         """
-        assert_valid_unrouted_path(path)
+        
+        if not path:
+            path = ''
+        else:
+            path = '/' + posixpath.normpath(path.lstrip('/'))
         self.append(HistoryChunk(path, router, data))
     
     def url_for(self, _strict=True, **data):
@@ -57,38 +61,6 @@ _HistoryChunk = collections.namedtuple('HistoryChunk', 'path router data'.split(
 class HistoryChunk(_HistoryChunk):
     def __new__(cls, path, router=None, data=None):
         return _HistoryChunk.__new__(cls, path, router, data or {})
-
-def assert_valid_unrouted_path(path):
-    """Assert that a given path is a valid path for routing.
-
-    Throws a ValueError if the path is not a valid routing path, ie., the path
-    must be absolute, and not have any dot segments.
-
-    Examples:
-
-        >>> assert_valid_unrouted_path('/one/two')
-        >>> assert_valid_unrouted_path('/one two')
-        >>> assert_valid_unrouted_path('')
-
-        >>> assert_valid_unrouted_path('relative')
-        Traceback (most recent call last):
-        ...
-        ValueError: path not absolute: 'relative'
-
-        >>> assert_valid_unrouted_path('/.')
-        Traceback (most recent call last):
-        ...
-        ValueError: path not normalized: '/.'
-
-    """
-    if not path:
-        return
-    if not path.startswith('/'):
-        raise ValueError('path not absolute: %r' % path)
-    if path != posixpath.normpath(path):
-        raise ValueError('path not normalized: %r' % path)
-
-
 
 
 def get_route_data(environ):
