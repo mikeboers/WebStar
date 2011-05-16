@@ -5,7 +5,8 @@ import sys
 
 from webtest import TestApp
 import unittest
-
+from webob.dec import wsgify as as_request
+from webob.response import Response
 
 class TestCase(unittest.TestCase):
     

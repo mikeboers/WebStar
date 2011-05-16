@@ -47,13 +47,17 @@ class Router(core.RouterInterface):
     def register_package(self, pattern, package, recursive=False):
         if isinstance(package, basestring):
             package = __import__(package)
+            
         module_names = set()
-        
         # Look for unloaded modules.
         for directory in package.__path__:
             if not os.path.exists(directory):
                 continue
             for name in os.listdir(directory):
+                init_path = os.path.join(directory, name, '__init__.py')
+                if os.path.exists(init_path) or os.path.exists(init_path + 'c'):
+                    module_names.add(name)
+                    continue
                 if not (name.endswith('.py') or name.endswith('.pyc')):
                     continue
                 name = name.rsplit('.', 1)[0]

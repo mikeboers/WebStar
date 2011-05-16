@@ -100,6 +100,23 @@ class TestRealModules(TestCase):
     def test_basic(self):
         res = self.app.get('/static')
         self.assertEqual(res.body, 'package.static')
+    
+    def test_leaf(self):
+        res = self.app.get('/sub/leaf')
+        self.assertEqual(res.body, 'package.__init__')
+        
+
+class TestRealRecursiveModules(TestRealModules):
+    
+    def setUp(self):
+        self.router = Router()
+        self.app = TestApp(self.router)
+        from . import examplepackage
+        self.router.register_package('', examplepackage, recursive=True)
+    
+    def test_leaf(self):
+        res = self.app.get('/sub/leaf')
+        self.assertEqual(res.body, 'I am a leaf')
 
 
 class TestTraversal(TestCase):
