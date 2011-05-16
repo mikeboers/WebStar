@@ -80,7 +80,7 @@ class Router(core.RouterInterface):
                     next=app,
                     router=self,
                     consumed=path[:-len(unrouted)] if unrouted else path,
-                    unrouted=unrouted,
+                    unrouted=core.normalize_path(unrouted),
                     data=data
                 )
 

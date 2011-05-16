@@ -24,6 +24,10 @@ def normalize_path(*segments):
         return ''
     return '/' + posixpath.normpath(path).lstrip('/')
 
+
+GenerateStep = collections.namedtuple('GenerateStep', 'segment next'.split())
+RouteStep = collections.namedtuple('RouteStep', 'next consumed unrouted data router')
+
 class Route(list):
     
     @classmethod
@@ -76,21 +80,10 @@ class Route(list):
         return '<%s:%s>' % (self.__class__.__name__, list.__repr__(self))
         
 
-GenerateStep = collections.namedtuple('GenerateStep', 'segment next'.split())
-RouteStep = collections.namedtuple('RouteStep', 'next consumed unrouted data router')
 
 def get_route_data(environ):
     route = Route.from_environ(environ)
     return route.data if route else {}
-
-
-class RoutingError(ValueError):
-    def __init__(self, history, router, path):
-        self.history = history
-        self.router = router
-        self.path = path
-        msg = 'failed on route %r at %r with %r' % (history, router, path)
-        ValueError.__init__(self, msg)
 
 class GenerationError(ValueError):
     def __init__(self, path, router, data):
@@ -113,23 +106,12 @@ class RouterInterface(object):
     def generate_step(self, data):
         """Return GenerateStep, or None if a segment can't be generated."""
         raise NotImplementedError()
+        
     
-    def modify_path(self, path):
-        """Modify the path downstream of the router during generation.
-        
-        Allows a router to mutate the unrouted path. The route_step should
-        undo this mutation.
-        
-        """
-        return path
     
-    def route(self, path, strict=False):
-        """Route a given path, starting at this router.
-        
-        If strict, a router that can't route a step will result in a raised
-        RoutingError exception.
-        
-        """    
+    def route(self, path):
+        """Route a given path, starting at this router."""    
+        path = normalize_path(path)
         steps = self._route(self, path)
         if not steps:
             return
@@ -152,12 +134,12 @@ class RouterInterface(object):
         
         # Build up wsgi.routing_args data
         args, kwargs = environ.setdefault('wsgiorg.routing_args', ((), {}))
-        for step in route.history:
+        for step in route:
             kwargs.update(step.data)
         
-        environ[HISTORY_ENVIRON_KEY] = route.history
+        environ[HISTORY_ENVIRON_KEY] = route
         environ['PATH_INFO'] = route.unrouted
-        environ['SCRIPT_NAME'] = environ.get('SCRIPT_NAME', '') + route.history.consumed
+        environ['SCRIPT_NAME'] = environ.get('SCRIPT_NAME', '') + route.consumed
         
         return route.app(environ, start)
     
@@ -200,13 +182,7 @@ class RouterInterface(object):
             path.append(step.segment)
         
         log.debug('\tDONE.')
-        out = ''
-        for i, segment in reversed(list(enumerate(path))):
-            node = nodes[i]
-            out = segment + out
-            out = node.modify_path(out)
-        
-        return str(out)
+        return normalize_path('/'.join(path))
     
     def url_for(self, _strict=True, **data):
         return self.generate(data, strict=_strict)
