@@ -18,7 +18,12 @@ log = logging.getLogger(__name__)
 HISTORY_ENVIRON_KEY = 'webstar.route.history'
 
 
-class RouteHistory(list):
+class History(list):
+    
+    @classmethod
+    def from_environ(cls, environ):
+        """Gets the list of routing history from the environ."""
+        return environ.get(HISTORY_ENVIRON_KEY)
     
     def __init__(self, path):
         self.update(path)
@@ -33,7 +38,7 @@ class RouteHistory(list):
 
         """
         assert_valid_unrouted_path(path)
-        self.append(RouteHistoryChunk(path, router, data))
+        self.append(HistoryChunk(path, router, data))
     
     def url_for(self, _strict=True, **data):
         for i, chunk in enumerate(self):
@@ -45,13 +50,13 @@ class RouteHistory(list):
         
 
 Route = collections.namedtuple('Route', 'history app path'.split())
-GenerationStep = collections.namedtuple('GenerationStep', 'segment next'.split())
-RoutingStep = collections.namedtuple('RoutingStep', 'next path data')
+GenerateStep = collections.namedtuple('GenerateStep', 'segment next'.split())
+RouteStep = collections.namedtuple('RouteStep', 'next path data')
 
-_RouteHistoryChunk = collections.namedtuple('RouteHistoryChunk', 'path router data'.split())
-class RouteHistoryChunk(_RouteHistoryChunk):
+_HistoryChunk = collections.namedtuple('HistoryChunk', 'path router data'.split())
+class HistoryChunk(_HistoryChunk):
     def __new__(cls, path, router=None, data=None):
-        return _RouteHistoryChunk.__new__(cls, path, router, data or {})
+        return _HistoryChunk.__new__(cls, path, router, data or {})
 
 def assert_valid_unrouted_path(path):
     """Assert that a given path is a valid path for routing.
@@ -84,13 +89,10 @@ def assert_valid_unrouted_path(path):
         raise ValueError('path not normalized: %r' % path)
 
 
-def get_route_history(environ):
-    """Gets the list of routing history from the environ."""
-    return environ.get(HISTORY_ENVIRON_KEY)
 
 
 def get_route_data(environ):
-    history = get_route_history(environ)
+    history = History.from_environ(environ)
     if not history:
         return {}
     data = {}
@@ -138,11 +140,11 @@ class Router(object):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
     def route_step(self, path):
-        """Return RoutingStep, or None if the path can't be routed."""
+        """Return RouteStep, or None if the path can't be routed."""
         raise NotImplementedError()
     
     def generate_step(self, data):
-        """Return GenerationStep, or None if a segment can't be generated."""
+        """Return GenerateStep, or None if a segment can't be generated."""
         raise NotImplementedError()
     
     def modify_path(self, path):
@@ -163,7 +165,7 @@ class Router(object):
         """
         log.debug('Starting route %r:' % path)
         steps = 0
-        history = RouteHistory(path)
+        history = History(path)
         router = self
         while hasattr(router, 'route_step'):
             steps += 1
@@ -174,8 +176,8 @@ class Router(object):
                     raise RoutingError(history, router, path)
                 return None
             log.debug('\t%d: %r' % (steps, step))
-            if not isinstance(step, RoutingStep):
-                step = RoutingStep(*step)
+            if not isinstance(step, RouteStep):
+                step = RouteStep(*step)
             history.update(path=step.path, router=router, data=step.data)
             router = step.next
             path = step.path
@@ -188,7 +190,7 @@ class Router(object):
     
     def __call__(self, environ, start):
         
-        history = get_route_history(environ)
+        history = History.from_environ(environ)
         path = environ.get('PATH_INFO', '')
             
         route = self.route(path)
@@ -252,8 +254,8 @@ class Router(object):
                     raise GenerationError(path, node, route_data)
                 return None
             log.debug('\t%d: apply_data=%r, %r from %r' % (route_i + 1, apply_route_data, step, node))
-            if not isinstance(step, GenerationStep):
-                step = GenerationStep(*step)
+            if not isinstance(step, GenerateStep):
+                step = GenerateStep(*step)
 
             node = step.next
             path.append(step.segment)

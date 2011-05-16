@@ -1,5 +1,6 @@
 from bisect import insort
 import collections
+import functools
 import hashlib
 import logging
 import re
@@ -38,17 +39,14 @@ class Router(core.Router):
 
         # We are not being used directly, so return a decorator to do the
         # work later.
-        def ReRouter_register(app):
-            self.register(pattern, app, **kwargs)
-            return app
-        return ReRouter_register
+        return functools.partial(self.register, pattern, **kwargs)
 
     def route_step(self, path):
         for _, pattern, app in self._apps:
             m = pattern.match(path)
             if m:
                 kwargs, path = m
-                return core.RoutingStep(next=app, path=path, data=kwargs)
+                return core.RouteStep(next=app, path=path, data=kwargs)
 
     def generate_step(self, data):
         log.debug('generate_step(%r, %r)' % (self, data))
@@ -61,7 +59,7 @@ class Router(core.Router):
                 pattern.constants.iteritems()):
                 continue
             try:
-                return core.GenerationStep(segment=pattern.format(**data), next=app)
+                return core.GenerateStep(segment=pattern.format(**data), next=app)
             except KeyError:
                 pass
                 # log.exception('KeyError while generating')
