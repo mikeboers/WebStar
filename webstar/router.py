@@ -57,9 +57,9 @@ class Router(core.Router):
                 module_names.add(name)
         for name in sorted(module_names):
             try:
-                module = __import__(package.__name__ + '.' + name)
+                module = __import__(package.__name__ + '.' + name, fromlist=['hack'])
             except ImportError:
-                log.warn('could not import %r' % (package.__name__ + '.' + name))
+                log.warn('could not import %r; skipping' % (package.__name__ + '.' + name))
             else:
                 self.register_module(
                     core.normalize_path(pattern, name),
@@ -68,6 +68,7 @@ class Router(core.Router):
         self.register_module(pattern, package)
     
     def register_module(self, pattern, module):
+        log.debug('register_module %r -> %r' % (pattern, module))
         self.register(pattern, ModuleRouter(module))
     
     def route_step(self, path):

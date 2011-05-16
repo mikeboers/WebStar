@@ -89,12 +89,8 @@ Change "_priority" to "priority".
 Discovery of routes on modules:
 	For now just pick up whatever is at __app__
 	
-	
-	
-	
 
 register_package(..., recursive=True)
-register_module
 
 
 

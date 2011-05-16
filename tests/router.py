@@ -75,5 +75,9 @@ class TestModules(TestCase):
     def test_default(self):
         res = self.app.get('/')
         self.assertEqual(res.body, 'package.__init__')
+    
+    def test_basic(self):
+        res = self.app.get('/static')
+        self.assertEqual(res.body, 'package.static')
 
 
