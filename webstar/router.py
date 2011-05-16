@@ -76,7 +76,7 @@ class Router(core.RouterInterface):
             m = pattern.match(path)
             if m:
                 data, unrouted = m
-                return core.RouteStep(
+                yield core.RouteStep(
                     next=app,
                     consumed=path[:-len(unrouted)] if unrouted else path,
                     unrouted=unrouted,

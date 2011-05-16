@@ -81,3 +81,21 @@ class TestModules(TestCase):
         self.assertEqual(res.body, 'package.static')
 
 
+class TestTraversal(TestCase):
+    
+    def test_dont_fail_immediately(self):
+        
+        main = Router()
+        a = main.register('', Router())
+        b = main.register('', Router())
+        a.register('/a', EchoApp('A says hello'))
+        b.register('/b', EchoApp('B says hi'))
+        
+        app = TestApp(main)
+        res = app.get('/a')
+        self.assertEqual(res.body, 'A says hello')
+        res = app.get('/b')
+        self.assertEqual(res.body, 'B says hi')
+        
+        
+        

@@ -132,33 +132,31 @@ class RouterInterface(object):
         history = History(path)
         router = self
         
-        while isinstance(router, RouterInterface):
-            steps += 1
-            step = router.route_step(path)
-            if not step:
-                if strict:
-                    raise RoutingError(history, router, path)
-                log.debug('\tFAILED')
-                return None
-                
-            log.debug('\t%d: %r' % (steps, step))
-            
+        steps = self._route(self, path)
+        if not steps:
+            return
+        for step in steps:
             history.update(
                 unrouted=step.unrouted, 
                 consumed=step.consumed,
-                router=router,
+                router='xxx',
                 data=step.data
             )
             
-            router = step.next
-            path = step.unrouted
-            
-        log.debug('\tDONE')
         return Route(
-            history=history,
-            app=router,
-            unrouted=path
-        )
+                history=history,
+                app=steps[-1].next,
+                unrouted=steps[-1].unrouted
+            )
+    
+    def _route(self, node, path):
+        log.debug('_route: %r, %r' % (node, path))
+        if not isinstance(node, RouterInterface):
+            return []
+        for step in node.route_step(path):
+            res = self._route(step.next, step.unrouted)
+            if res is not None:
+                return [step] + res
     
     def __call__(self, environ, start):
         
