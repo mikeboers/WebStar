@@ -93,12 +93,12 @@ class Router(core.RouterInterface):
         self.register(pattern, ModuleRouter(module))
     
     def route_step(self, path):
-        for _, pattern, app in self._apps:
+        for _, pattern, node in self._apps:
             m = pattern.match(path)
             if m:
                 data, unrouted = m
                 yield core.RouteStep(
-                    head=app,
+                    head=node,
                     router=self,
                     consumed=path[:-len(unrouted)] if unrouted else path,
                     unrouted=core.normalize_path(unrouted),
@@ -107,7 +107,7 @@ class Router(core.RouterInterface):
 
     def generate_step(self, data):
         # log.debug('generate_step(%r, %r)' % (self, data))
-        for _, pattern, app in self._apps:
+        for _, pattern, node in self._apps:
             # Skip patterns that are not identifiable.
             if not (pattern._keys or pattern.constants):
                 continue
@@ -116,7 +116,7 @@ class Router(core.RouterInterface):
                 pattern.constants.iteritems()):
                 continue
             try:
-                return core.GenerateStep(segment=pattern.format(**data), next=app)
+                yield core.GenerateStep(segment=pattern.format(**data), head=node)
             except KeyError:
                 pass
                 # log.exception('KeyError while generating')

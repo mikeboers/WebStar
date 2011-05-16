@@ -87,10 +87,7 @@ Change "_priority" to "priority".
 
 Discovery of routes on modules:
 	For now just pick up whatever is at __app__
-	
 
-register_package(..., recursive=True)
-register package should also look in sys.modules for direct children
 
 webstar.nitrogen should have extensions for nitrogen to match previous functionality
 
