@@ -77,7 +77,7 @@ class Router(core.RouterInterface):
             if m:
                 data, unrouted = m
                 yield core.RouteStep(
-                    next=app,
+                    head=app,
                     router=self,
                     consumed=path[:-len(unrouted)] if unrouted else path,
                     unrouted=core.normalize_path(unrouted),

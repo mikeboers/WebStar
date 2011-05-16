@@ -26,14 +26,14 @@ def normalize_path(*segments):
 
 
 GenerateStep = collections.namedtuple('GenerateStep', 'segment next'.split())
-RouteStep = collections.namedtuple('RouteStep', 'next consumed unrouted data router')
+RouteStep = collections.namedtuple('RouteStep', 'head consumed unrouted data router')
 
 class Route(list):
     
     def __init__(self, path, steps):
         self.append(RouteStep(
             unrouted=path,
-            next=None,
+            head=None,
             consumed=None,
             data={},
             router=None,
@@ -51,7 +51,7 @@ class Route(list):
     
     @property
     def app(self):
-        return self[-1].next
+        return self[-1].head
     
     @property
     def history(self):
@@ -115,7 +115,7 @@ class RouterInterface(object):
         if not isinstance(node, RouterInterface):
             return []
         for step in node.route_step(path):
-            res = self._route(step.next, step.unrouted)
+            res = self._route(step.head, step.unrouted)
             if res is not None:
                 return [step] + res
     

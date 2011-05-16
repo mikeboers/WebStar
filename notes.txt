@@ -82,8 +82,6 @@ unsorted
 ---------
 
 
-RouteStep.next -> "head"
-
 Change "_priority" to "priority".
 
 Discovery of routes on modules:
