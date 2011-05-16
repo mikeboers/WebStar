@@ -35,16 +35,12 @@ class History(list):
         return obj
     
     def __init__(self, path):
-        self.update(path)
-    
-    def update(self, unrouted, consumed=None, router=None, data=None):
-        """Sets the current unrouted path and adds to routing history."""
-        
-        self.append(HistoryChunk(
-            unrouted=normalize_path(unrouted),
-            consumed=consumed,
-            router=router,
-            data=data
+        self.append(RouteStep(
+            unrouted=path,
+            next=None,
+            consumed=None,
+            data={},
+            router=None,
         ))
     
     def url_for(self, _strict=True, **data):
@@ -62,13 +58,8 @@ class History(list):
 
 Route = collections.namedtuple('Route', 'history app unrouted'.split())
 GenerateStep = collections.namedtuple('GenerateStep', 'segment next'.split())
-RouteStep = collections.namedtuple('RouteStep', 'next consumed unrouted data')
 
-_HistoryChunk = collections.namedtuple('HistoryChunk', 'unrouted consumed router data'.split())
-class HistoryChunk(_HistoryChunk):
-    def __new__(cls, unrouted, consumed=None, router=None, data=None):
-        return _HistoryChunk.__new__(cls, unrouted, consumed, router, data or {})
-
+RouteStep = collections.namedtuple('RouteStep', 'next consumed unrouted data router')
 
 def get_route_data(environ):
     history = History.from_environ(environ)
@@ -135,13 +126,7 @@ class RouterInterface(object):
         steps = self._route(self, path)
         if not steps:
             return
-        for step in steps:
-            history.update(
-                unrouted=step.unrouted, 
-                consumed=step.consumed,
-                router='xxx',
-                data=step.data
-            )
+        history.extend(steps)
             
         return Route(
                 history=history,
