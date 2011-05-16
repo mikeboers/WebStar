@@ -97,7 +97,7 @@ class GenerationError(ValueError):
         ValueError.__init__(self, msg)
 
 
-class Router(object):
+class RouterInterface(object):
     
     def __repr__(self):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
@@ -126,28 +126,34 @@ class Router(object):
         RoutingError exception.
         
         """
-        log.debug('Starting route %r:' % path)
+        
+        log.debug('starting to route %r:' % path)
         steps = 0
         history = History(path)
         router = self
-        while hasattr(router, 'route_step'):
+        
+        while isinstance(router, RouterInterface):
             steps += 1
-            # print 'a', router, path
             step = router.route_step(path)
-            if step is None:
+            if not step:
                 if strict:
                     raise RoutingError(history, router, path)
+                log.debug('\tFAILED')
                 return None
+                
             log.debug('\t%d: %r' % (steps, step))
+            
             history.update(
                 unrouted=step.unrouted, 
                 consumed=step.consumed,
                 router=router,
                 data=step.data
             )
+            
             router = step.next
             path = step.unrouted
-        log.debug('\tDONE.')
+            
+        log.debug('\tDONE')
         return Route(
             history=history,
             app=router,
@@ -156,10 +162,7 @@ class Router(object):
     
     def __call__(self, environ, start):
         
-        history = History.from_environ(environ)
-        path = environ.get('PATH_INFO', '')
-            
-        route = self.route(path)
+        route = self.route(environ.get('PATH_INFO', ''))
         if route is None:
             return self.not_found_app(environ, start)
         
@@ -193,7 +196,7 @@ class Router(object):
         nodes = []
         node = self
         log.debug('Starting route generation with %r from %r:' % (new_data, history))
-        while node is not None and hasattr(node, 'generate_step'):
+        while isinstance(node, RouterInterface):
             nodes.append(node)
             route_i += 1
             if apply_route_data and (len(history) <= route_i or
@@ -203,13 +206,11 @@ class Router(object):
                 route_data.update(history[route_i].data)
                 route_data.update(new_data)
             step = node.generate_step(route_data)
-            if step is None:
+            if not step:
                 if strict:
                     raise GenerationError(path, node, route_data)
                 return None
             log.debug('\t%d: apply_data=%r, %r from %r' % (route_i + 1, apply_route_data, step, node))
-            if not isinstance(step, GenerateStep):
-                step = GenerateStep(*step)
 
             node = step.next
             path.append(step.segment)
@@ -219,8 +220,7 @@ class Router(object):
         for i, segment in reversed(list(enumerate(path))):
             node = nodes[i]
             out = segment + out
-            if hasattr(node, 'modify_path'):
-                out = node.modify_path(out)
+            out = node.modify_path(out)
         
         return str(out)
     

@@ -14,7 +14,7 @@ from .pattern import Pattern, FormatError
 log = logging.getLogger(__name__)
 
 
-class Router(core.Router):
+class Router(core.RouterInterface):
 
     def __init__(self):
         self._apps = []
