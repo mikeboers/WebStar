@@ -17,11 +17,11 @@ class Pattern(object):
     
     token_re = re.compile(r'''
         {                            
-        ([a-zA-Z_]\w*)               # group 1: name
-        (?::                         # colon and group 2: pattern
-          ([^:}\\]*(?:\\.[^:}\\]*)*) # zero or more chars. } can be escaped (untested)
-          (?::                       # colon and group 3: format string
-            ([^}\\]*(?:\\.[^}\\]*)*) # zero or more chars. } can be escaped (untested)
+        ([a-zA-Z_][a-zA-Z0-9_-]*)      # group 1: name
+        (?::                           # colon and group 2: pattern
+          ([^:{]+(?:\{[^}]+\}[^:{]*)*) # zero or more chars, can use {#}
+          (?::                         # colon and group 3: format string
+            ([^}]+)
           )?
         )?
         }

@@ -82,7 +82,7 @@ unsorted
 ---------
 
 
-Routers will now recognize themselves via inheritance from a RouterInterface.
+RouteStep.next -> "head"
 
 Change "_priority" to "priority".
 
@@ -92,6 +92,9 @@ Discovery of routes on modules:
 
 register_package(..., recursive=True)
 
+webstar.nitrogen should have extensions for nitrogen to match previous functionality
+
+generation should also use yields
 
 
 All the different router types can be represented on one Router class:

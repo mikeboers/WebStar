@@ -90,3 +90,10 @@ class TestPattern(TestCase):
         s = p.format(year=12)
         self.assertEqual(s, '/0012')
     
+    def test_braces(self):
+        p = Pattern(r'/{x:[a-z]{2,3}}')
+        self.assertEqual(None, p.match('/a'))
+        self.assertEqual(dict(x='bb'), p.match('/bb')[0])
+        self.assertEqual(dict(x='ccc'), p.match('/ccc')[0])
+        self.assertEqual(None, p.match('/dddd'))
+    
