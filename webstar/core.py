@@ -189,15 +189,11 @@ class Router(object):
     def __call__(self, environ, start):
         
         history = get_route_history(environ)
-        if history:
-            path = history[-1].path
-        else:
-            path = environ.get('PATH_INFO', '')
+        path = environ.get('PATH_INFO', '')
             
         route = self.route(path)
         if route is None:
             return self.not_found_app(environ, start)
-            raise HTTPNotFound('could not route %r with %r' % (path, self))
             
         # Build up SCRIPT_NAME only taking chunks that a simple prefix removed
         # from each chunk of history
