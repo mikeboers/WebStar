@@ -23,26 +23,28 @@ class History(list):
     @classmethod
     def from_environ(cls, environ):
         """Gets the list of routing history from the environ."""
-        return environ.get(HISTORY_ENVIRON_KEY)
+        obj = environ.get(HISTORY_ENVIRON_KEY)
+        if not obj:
+            return cls(environ.get('PATH_INFO', ''))
+        return obj
     
     def __init__(self, path):
         self.update(path)
     
-    def update(self, path, router=None, data=None):
-        """Sets the current unrouted path and add to routing history.
+    def update(self, unrouted, consumed=None, router=None, data=None):
+        """Sets the current unrouted path and adds to routing history."""
         
-        Params:
-            unrouted -- The new unrouted path. Must pass assert_valid_unrouted_path. 
-            router -- Whatever is responsible for this change.
-            data -- A mapping of data extracted from the route for this chunk.
-
-        """
-        
-        if not path:
-            path = ''
+        if not unrouted:
+            unrouted = ''
         else:
-            path = '/' + posixpath.normpath(path.lstrip('/'))
-        self.append(HistoryChunk(path, router, data))
+            unrouted = '/' + posixpath.normpath(unrouted.lstrip('/'))
+        
+        self.append(HistoryChunk(
+            unrouted=unrouted,
+            consumed=consumed,
+            router=router,
+            data=data
+        ))
     
     def url_for(self, _strict=True, **data):
         for i, chunk in enumerate(self):
@@ -53,14 +55,14 @@ class History(list):
         return '<%s:%s>' % (self.__class__.__name__, list.__repr__(self))
         
 
-Route = collections.namedtuple('Route', 'history app path'.split())
+Route = collections.namedtuple('Route', 'history app unrouted'.split())
 GenerateStep = collections.namedtuple('GenerateStep', 'segment next'.split())
-RouteStep = collections.namedtuple('RouteStep', 'next path data')
+RouteStep = collections.namedtuple('RouteStep', 'next consumed unrouted data')
 
-_HistoryChunk = collections.namedtuple('HistoryChunk', 'path router data'.split())
+_HistoryChunk = collections.namedtuple('HistoryChunk', 'unrouted consumed router data'.split())
 class HistoryChunk(_HistoryChunk):
-    def __new__(cls, path, router=None, data=None):
-        return _HistoryChunk.__new__(cls, path, router, data or {})
+    def __new__(cls, unrouted, consumed=None, router=None, data=None):
+        return _HistoryChunk.__new__(cls, unrouted, consumed, router, data or {})
 
 
 def get_route_data(environ):
@@ -148,16 +150,19 @@ class Router(object):
                     raise RoutingError(history, router, path)
                 return None
             log.debug('\t%d: %r' % (steps, step))
-            if not isinstance(step, RouteStep):
-                step = RouteStep(*step)
-            history.update(path=step.path, router=router, data=step.data)
+            history.update(
+                unrouted=step.unrouted, 
+                consumed=step.consumed,
+                router=router,
+                data=step.data
+            )
             router = step.next
-            path = step.path
+            path = step.unrouted
         log.debug('\tDONE.')
         return Route(
             history=history,
             app=router,
-            path=path
+            unrouted=path
         )
     
     def __call__(self, environ, start):
@@ -168,27 +173,17 @@ class Router(object):
         route = self.route(path)
         if route is None:
             return self.not_found_app(environ, start)
-            
-        # Build up SCRIPT_NAME only taking chunks that a simple prefix removed
-        # from each chunk of history
-        script_name = environ.get('SCRIPT_NAME', '')
-        path_before = route.history[0].path
-        for chunk in route.history[1:]:
-            path_after = chunk.path
-            diff = simple_diff(path_before, path_after)
-            if diff is not None:
-                script_name += diff
-            path_before = path_after
         
         # Build up wsgi.routing_args data
-        args, kwargs = environ.get('wsgiorg.routing_args') or ((), {})
+        args, kwargs = environ.setdefault('wsgiorg.routing_args', ((), {}))
         for step in route.history:
             kwargs.update(step.data)
         
         environ[HISTORY_ENVIRON_KEY] = route.history
-        environ['SCRIPT_NAME'] = script_name
-        environ['PATH_INFO'] = route.path
-        environ['wsgiorg.routing_args'] = args, kwargs
+        environ['PATH_INFO'] = route.unrouted
+        environ['SCRIPT_NAME'] = environ.get('SCRIPT_NAME', '') + ''.join(
+            x.consumed or '' for x in route.history
+        )
         
         return route.app(environ, start)
     
