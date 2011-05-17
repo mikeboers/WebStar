@@ -51,7 +51,6 @@ into their raw URI representation.
                 data[name] = re.sub(r'\W+', '-', data[name])
         return _clean_names
 
-Existing parsers/formatters/requirements will be converted to new-style predicates internally.
 
 - perhaps pass wsgi environ as well?
     - then environ['webstar.history'] would be availible
@@ -65,6 +64,11 @@ unsorted
 
 constants for module names
 	data_key='module'
+
+if supplied data is a list after formatters, and there is a constant or a key
+the use the first item in the list and pop it off
+	is there a way to turn slash separated strings into lists?
+
 
 get environ into predicates
 

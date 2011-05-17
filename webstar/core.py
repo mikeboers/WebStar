@@ -15,7 +15,7 @@ import posixpath
 log = logging.getLogger(__name__)
 
 
-HISTORY_ENVIRON_KEY = 'webstar.route.history'
+HISTORY_ENVIRON_KEY = 'webstar.route'
 
 
 def normalize_path(*segments):
@@ -27,6 +27,7 @@ def normalize_path(*segments):
 
 GenerateStep = collections.namedtuple('GenerateStep', 'segment head'.split())
 RouteStep = collections.namedtuple('RouteStep', 'head consumed unrouted data router')
+
 
 class Route(list):
     
@@ -59,11 +60,7 @@ class Route(list):
     @property
     def app(self):
         return self[-1].head
-    
-    @property
-    def history(self):
-        return self
-    
+   
     @property
     def unrouted(self):
         return self[-1].unrouted
