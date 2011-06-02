@@ -34,6 +34,14 @@ class TestPattern(TestCase):
         self.assertEqual(s, '/news/archive')
     
     def test_constants(self):
+        p = Pattern('/gallery/{action}', constants=dict(controller='gallery'))
+        data, path = p.match('/gallery/edit')
+        self.assertEqual(data, dict(
+            controller='gallery',
+            action='edit',
+        ))
+        
+    def test_constants_kwargs(self):
         p = Pattern('/gallery/{action}', controller='gallery')
         data, path = p.match('/gallery/edit')
         self.assertEqual(data, dict(
@@ -115,4 +123,16 @@ class TestPattern(TestCase):
         self.assertEqual(p.format(), '/value')
         self.assertEqual(p.format(key='value'), '/value')
         self.assertEqual(p.format(key='notvalue'), '/notvalue')
+    
+    def test_identifiable(self):
+        p = Pattern('/hello')
+        self.assertEqual(p.identifiable(), False)
+        p = Pattern('/hello', name='hello')
+        self.assertEqual(p.identifiable(), True)
+        p = Pattern('/hello', constants=dict(name='hello'))
+        self.assertEqual(p.identifiable(), True)
+        p = Pattern('/hello', defaults=dict(name='hello'))
+        self.assertEqual(p.identifiable(), False)
+        p = Pattern('/{key}')
+        self.assertEqual(p.identifiable(), True)
 

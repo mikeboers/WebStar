@@ -115,8 +115,7 @@ class Router(core.RouterInterface):
         # log.debug('generate_step(%r, %r)' % (self, data))
         for _, pattern, node in self._apps:
             
-            # Skip patterns that are not identifiable.
-            if not (pattern._keys or pattern.constants):
+            if not pattern.identifiable():
                 continue
             
             try:

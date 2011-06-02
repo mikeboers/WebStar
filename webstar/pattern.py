@@ -5,8 +5,6 @@ from . import core
 
 
 class Pattern(core.PatternInterface):
-
-    def identifiable(self): pass
     
     default_pattern = '[^/]+'
     default_format = 's'
@@ -67,7 +65,9 @@ class Pattern(core.PatternInterface):
             return
         return m.groupdict(), value[m.end():]
 
-    
+    def identifiable(self):
+        return bool(self.constants or self._keys)
+        
     def _format(self, data):
         try:
             return self._format_string % data
