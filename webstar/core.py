@@ -31,6 +31,10 @@ RouteStep = collections.namedtuple('RouteStep', 'head consumed unrouted data rou
 
 class Route(list):
     
+    @staticmethod
+    def from_environ(environ):
+        return environ.get(HISTORY_ENVIRON_KEY)
+    
     def __init__(self, path, steps):
         self.append(RouteStep(
             unrouted=path,
