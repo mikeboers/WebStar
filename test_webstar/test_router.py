@@ -3,7 +3,6 @@ from . import *
 from webstar.core import *
 from webstar import core
 from webstar.router import Router
-from webstar.pattern import FormatMatchError
 
 class TestRouterBasics(TestCase):
     

@@ -3,11 +3,6 @@ import re
 
 from . import core
 
-class FormatKeyError(core.FormatError, KeyError): pass
-class FormatMatchError(core.FormatError, ValueError): pass
-class FormatIncompleteMatchError(core.FormatError, ValueError): pass
-class FormatPredicateError(core.FormatError, ValueError): pass
-class FormatDataEqualityError(core.FormatError, ValueError): pass
 
 class Pattern(core.PatternInterface):
 
@@ -52,7 +47,7 @@ class Pattern(core.PatternInterface):
             pattern = pattern.replace(hash, '(?P<%s>%s)' % (key, patt), 1)
             format  = format.replace(hash, '%%(%s)%s' % (key, form), 1)
 
-        self._format = format
+        self._format_string = format
         self._compiled = re.compile(pattern + r'(?=/|$)')
 
         del self._segments
@@ -77,40 +72,11 @@ class Pattern(core.PatternInterface):
 
         return m.groupdict(), value[m.end():]
 
-    def _test_predicates(self, data):
-        for func in self.predicates:
-            if not func(data):
-                return
-        return True
     
-    def format(self, **kwargs):
-        data = self.constants.copy()
-        data.update(kwargs)
-        
-        for func in self.formatters:
-            func(data)
-
+    def _format(self, data):
         try:
-            out = self._format % data
+            return self._format_string % data
         except KeyError as e:
-            raise FormatKeyError(*e.args)
-        
-        x = self.match(out)
-        if x is None:
-            raise FormatMatchError('final result does not satisfy original pattern')
-        m, d = x
-        if d:
-            raise FormatIncompleteMatchError('final result was not fully captured by original pattern')
-        
-        # Untested.
-        if not self._test_predicates(data):
-            raise FormatPredicateError('supplied data does not satisfy predicates')
-        
-        # Untested.
-        for k, v in m.iteritems():
-            if k in data and data[k] != v:
-                raise FormatDataEqualityError('re-match resolved different value for %r: got %r, expected %r' % (k, v, data[k]))
-
-        return out
+            raise core.FormatKeyError(*e.args)
 
 

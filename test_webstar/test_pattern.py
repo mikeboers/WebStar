@@ -1,5 +1,6 @@
 
 from . import *
+from webstar.core import *
 from webstar.pattern import *
 
 class TestPattern(TestCase):

@@ -93,6 +93,11 @@ class GenerationError(ValueError):
 
 class FormatError(Exception):
     pass
+class FormatKeyError(FormatError, KeyError): pass
+class FormatMatchError(FormatError, ValueError): pass
+class FormatIncompleteMatchError(FormatError, ValueError): pass
+class FormatPredicateError(FormatError, ValueError): pass
+class FormatDataEqualityError(FormatError, ValueError): pass
 
 
 class PatternInterface(object):
@@ -147,7 +152,14 @@ class PatternInterface(object):
         
         super(PatternInterface, self).__init__(*args)
         
+       
+    def _test_predicates(self, data):
+        for func in self.predicates:
+            if not func(data):
+                return
+        return True
         
+         
     def match(self, path):
         
         m = self._match(path)
@@ -181,8 +193,36 @@ class PatternInterface(object):
         '''
         return False
     
+        
+    def format(self, **kwargs):
+        data = self.constants.copy()
+        data.update(kwargs)
+
+        for func in self.formatters:
+            func(data)
+        
+        out = self._format(data)
+
+        x = self.match(out)
+        if x is None:
+            raise FormatMatchError('final result does not satisfy original pattern')
+        m, d = x
+        if d:
+            raise FormatIncompleteMatchError('final result was not fully captured by original pattern')
+
+        # Untested.
+        if not self._test_predicates(data):
+            raise FormatPredicateError('supplied data does not satisfy predicates')
+
+        # Untested.
+        for k, v in m.iteritems():
+            if k in data and data[k] != v:
+                raise FormatDataEqualityError('re-match resolved different value for %r: got %r, expected %r' % (k, v, data[k]))
+        
+        return out
+                
     @abc.abstractmethod
-    def format(self, data):
+    def _format(self, data):
         '''Return a string that would re-match to data that does not conflict.
         
         Ie. A pattern does not need to encode ALL of the data given to it to
