@@ -296,16 +296,15 @@ class RouterInterface(object):
         path_info = environ.get('PATH_INFO', '')
         normalized = normalize_path(path_info)
         if path_info and path_info != normalized:
-            log.info('redirecting to normalize %r' % path_info)
-            start('301 Moved Permanently', [
-                ('Location', normalized),
-                ('Content-Type', 'text/plain'),
-            ])
-            return ['''Your request is being redirected to the canonical location: %r''' % normalized]
-        
+            res = self.not_normalized_app(environ, start, normalized)
+            if res:
+                return res
+            
         route = self.route(path_info)
         if route is None:
-            return self.not_found_app(environ, start)
+            res = self.not_found_app(environ, start)
+            if res:
+                return res
         
         # Build up wsgi.routing_args data
         args, kwargs = environ.setdefault('wsgiorg.routing_args', ((), {}))
@@ -318,16 +317,34 @@ class RouterInterface(object):
         
         return route.app(environ, start)
     
+    def not_normalized_app(self, environ, start, normalized):
+        path_info = environ.get('PATH_INFO')
+        log.info('redirecting via 301 to normalize %r' % path_info)
+        start('301 Moved Permanently', [
+            ('Location', normalized),
+            ('Content-Type', 'text/plain'),
+        ])
+        return ['''
+<html><head> 
+<title>301 Moved Permanently</title> 
+</head><body> 
+<h1>Malformed URL</h1> 
+<p>Your requested URL (%s) is being redirected to the canonical location (%s).</p> 
+</body></html>
+        '''.strip() % (path_info, normalized)]
+        
     def not_found_app(self, environ, start):
+        path_info = environ.get('PATH_INFO')
+        log.info('404 for %r' % path_info)
         start('404 Not Found', [('Content-Type', 'text/html')])
         return ['''
 <html><head> 
 <title>404 Not Found</title> 
 </head><body> 
 <h1>Not Found</h1> 
-<p>The requested URL %s was not found on this server.</p> 
+<p>The requested URL (%s) was not found on this server.</p> 
 </body></html>
-        '''.strip() % environ.get('PATH_INFO', 'UNKNOWN')]
+        '''.strip() % path_info]
         
     def generate(self, *args, **kwargs):
         data = dict()
