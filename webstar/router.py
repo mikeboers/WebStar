@@ -9,7 +9,7 @@ import re
 import sys
 
 from . import core
-from .pattern import Pattern, FormatError
+from . import pattern as patmod
 
 
 log = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class Router(core.RouterInterface):
             # multiple apps at the same priority, respect the registration
             # order.
             priority = (-kwargs.pop('_priority', 0), len(self._apps))
-            insort(self._apps, (priority, Pattern(pattern, **kwargs), app))
+            insort(self._apps, (priority, patmod.Pattern(pattern, **kwargs), app))
             return app
 
         # We are not being used directly, so return a decorator to do the
@@ -126,7 +126,7 @@ class Router(core.RouterInterface):
             
             try:
                 segment = pattern.format(**data)
-            except FormatError:
+            except core.FormatError:
                 pass
             else:    
                 yield core.GenerateStep(segment=segment, head=node)
