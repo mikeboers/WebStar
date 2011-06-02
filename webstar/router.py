@@ -44,11 +44,12 @@ class Router(core.RouterInterface):
         # work later.
         return functools.partial(self.register, pattern, **kwargs)
 
-    def register_package(self, pattern, package, recursive=False):
+    def register_package(self, pattern, package, recursive=False, testing=False):
         if isinstance(package, basestring):
             package = __import__(package, fromlist=['hack'])
             
         module_names = set()
+        
         # Look for unloaded modules.
         for directory in package.__path__:
             if not os.path.exists(directory):
@@ -66,9 +67,10 @@ class Router(core.RouterInterface):
                 module_names.add(name)
         
         # Look for already imported modules; essentially for testing.
-        for name in sys.modules:
-            if name.startswith(package.__name__ + '.'):
-                module_names.add(name[len(package.__name__)+1:].split('.', 1)[0])
+        if testing:
+            for name in sys.modules:
+                if name.startswith(package.__name__ + '.'):
+                    module_names.add(name[len(package.__name__)+1:].split('.', 1)[0])
         
         for name in sorted(module_names):
             try:
@@ -86,7 +88,7 @@ class Router(core.RouterInterface):
                     module.__file__.endswith('/__import__.py') or
                     module.__file__.endswith('/__import__.pyc')
                 ):
-                    self.register_package(subpattern, module)
+                    self.register_package(subpattern, module, recursive=recursive, testing=testing)
                 else:
                     self.register_module(subpattern, module)
         

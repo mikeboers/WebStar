@@ -75,7 +75,7 @@ class TestDummyModules(TestCase):
     
     def test_basic(self):
         router = Router()
-        router.register_package('', self.root)
+        router.register_package('', self.root, testing=True)
         self.app = TestApp(router)
         
         res = self.app.get('/')
@@ -89,7 +89,7 @@ class TestDummyModules(TestCase):
         
     def test_recursive(self):
         router = Router()
-        router.register_package('', self.root, recursive=True)
+        router.register_package('', self.root, recursive=True, testing=True)
         self.app = TestApp(router)
 
         res = self.app.get('/')
