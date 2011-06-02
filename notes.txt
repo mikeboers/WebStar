@@ -62,7 +62,10 @@ into their raw URI representation.
 unsorted
 ---------
 
-- auto unslasher
+- go back to '' matching empty and '/' matching trailing slash?
+
+- get st5.com generation working
+	module data keys?
 
 - {*args} would catch slashes as well and then split on them
 

@@ -271,25 +271,25 @@ class RouterInterface(object):
         """Route a given path, starting at this router."""    
         path = normalize_path(path)
         # log.debug('starting route for %r' % path)
-        steps = self._route(self, path)
+        steps = self._route(self, path, 0)
         # log.debug('done')
         if not steps:
             return
         return Route(path, steps)
     
-    def _route(self, node, path):
+    def _route(self, node, path, depth):
         if not isinstance(node, RouterInterface):
-            # log.debug('- found leaf -> %r' % node)
+            log.debug('%d: found leaf -> %r' % (depth, node))
             return []
-        # log.debug('- trying %r with %r' % (path, node))
+        log.debug('%d: trying %r with %r' % (depth, path, node))
         for step in node.route_step(path):
-            res = self._route(step.head, step.unrouted)
+            res = self._route(step.head, step.unrouted, depth + 1)
             if res is not None:
-                # log.debug('- got %r' % res)
+                log.debug('%d: got %r' % (depth, res))
                 return [step] + res
             else:
                 pass
-                # log.debug('-  deadend')
+                log.debug('%d: deadend' % (depth, ))
     
     def __call__(self, environ, start):
         
@@ -347,6 +347,7 @@ class RouterInterface(object):
         '''.strip() % path_info]
         
     def generate(self, *args, **kwargs):
+        return '/fake'
         data = dict()
         for arg in args:
             data.update(arg)

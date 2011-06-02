@@ -48,7 +48,7 @@ class Router(core.RouterInterface):
         return functools.partial(self.register, pattern, **kwargs)
 
     def register_package(self, pattern, package, reload=False,
-        recursive=False, testing=False, data_key=None):
+        recursive=False, testing=False, data_key=None, include_init=False):
         if isinstance(package, basestring):
             package = __import__(package, fromlist=['hack'])
             
@@ -100,7 +100,8 @@ class Router(core.RouterInterface):
                 else:
                     self.register_module(subpattern, module, reload=reload)
         
-        self.register_module(pattern, package)
+        if include_init:
+            self.register_module(pattern, package)
     
     def register_module(self, pattern, module, reload=False):
         self.register(pattern, ModuleRouter(module, reload=reload))
@@ -147,7 +148,7 @@ class ModuleRouter(Router):
         return os.path.getmtime(self.module.__file__)
 
     def _assert_scanned(self):
-        if self.reload:
+        if False and self.reload:
             mtime = self.getmtime()
             if self._last_mtime != mtime:
                 self._last_mtime = mtime
@@ -156,10 +157,11 @@ class ModuleRouter(Router):
                 reload(self.module)
                 self._scanned = False
         if not self._scanned:
+            self._scanned = True
             self._apps = []
             main = getattr(self.module, '__app__', None)
             if main:
-                self.register(None, main)
+                self.register('', main)
         
     def route_step(self, path):
         self._assert_scanned()
