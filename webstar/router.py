@@ -140,6 +140,7 @@ class ModuleRouter(Router):
         self.reload = reload
         self._last_mtime = self.getmtime()
         self._scanned = False
+        self._assert_scanned()
         
     def getmtime(self):
         return os.path.getmtime(self.module.__file__)
