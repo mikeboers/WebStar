@@ -47,7 +47,8 @@ class Router(core.RouterInterface):
         # work later.
         return functools.partial(self.register, pattern, **kwargs)
 
-    def register_package(self, pattern, package, recursive=False, testing=False):
+    def register_package(self, pattern, package, reload=False,
+        recursive=False, testing=False, data_key=None):
         if isinstance(package, basestring):
             package = __import__(package, fromlist=['hack'])
             
@@ -91,14 +92,18 @@ class Router(core.RouterInterface):
                     module.__file__.endswith('/__import__.py') or
                     module.__file__.endswith('/__import__.pyc')
                 ):
-                    self.register_package(subpattern, module, recursive=recursive, testing=testing)
+                    self.register_package(subpattern, module,
+                        reload=reload,
+                        recursive=recursive,
+                        testing=testing
+                    )
                 else:
-                    self.register_module(subpattern, module)
+                    self.register_module(subpattern, module, reload=reload)
         
         self.register_module(pattern, package)
     
-    def register_module(self, pattern, module):
-        self.register(pattern, ModuleRouter(module))
+    def register_module(self, pattern, module, reload=False):
+        self.register(pattern, ModuleRouter(module, reload=reload))
     
     def route_step(self, path):
         for _, pattern, node in self._apps:
