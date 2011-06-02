@@ -46,7 +46,7 @@ class Router(core.RouterInterface):
 
     def register_package(self, pattern, package, recursive=False):
         if isinstance(package, basestring):
-            package = __import__(package)
+            package = __import__(package, fromlist=['hack'])
             
         module_names = set()
         # Look for unloaded modules.
