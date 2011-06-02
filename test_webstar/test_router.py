@@ -108,7 +108,7 @@ class TestRealModules(TestCase):
     def setUp(self):
         self.router = Router()
         self.app = TestApp(self.router)
-        from . import examplepackage
+        import examplepackage
         self.router.register_package('', examplepackage)
         
     def test_default(self):
