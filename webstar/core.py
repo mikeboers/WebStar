@@ -91,17 +91,22 @@ class GenerationError(ValueError):
 
 
 class RouterInterface(object):
+    __metaclass__ = abc.ABCMeta
     
     def __repr__(self):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
+    @abc.abstractmethod
     def route_step(self, path):
         """Yield a RouteStep for each possible route from this node."""
-        raise NotImplementedError()
+        while False:
+            yield None
     
+    @abc.abstractmethod
     def generate_step(self, data):
         """Yield a GenerateStep for each possible route from this node."""
-        raise NotImplementedError()
+        while False:
+            yield None
         
     
     
