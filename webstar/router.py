@@ -72,9 +72,13 @@ class Router(core.RouterInterface):
         
         for name in sorted(module_names):
             try:
-                module = __import__(package.__name__ + '.' + name, fromlist=['hack'])
-            except ImportError:
-                log.warn('could not import %r; skipping' % (package.__name__ + '.' + name))
+                module_name = package.__name__ + '.' + name
+                module = __import__(module_name, fromlist=['hack'])
+            except ImportError as e:
+                if e.args[0].endswith(' ' + module_name):
+                    log.warn('could not import %r; skipping' % (package.__name__ + '.' + name))
+                else:
+                    raise
             else:
                 subpattern = core.normalize_path(pattern, name)
                 if recursive and (
