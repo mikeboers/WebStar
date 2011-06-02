@@ -38,6 +38,9 @@ class Router(core.RouterInterface):
             # order.
             priority = (-kwargs.pop('_priority', 0), len(self._apps))
             insort(self._apps, (priority, patmod.Pattern(pattern, **kwargs), app))
+            
+            # log.debug('register %r -> %r' % (pattern, app))
+                
             return app
 
         # We are not being used directly, so return a decorator to do the
@@ -95,7 +98,6 @@ class Router(core.RouterInterface):
         self.register_module(pattern, package)
     
     def register_module(self, pattern, module):
-        log.debug('register_module %r -> %r' % (pattern, module))
         self.register(pattern, ModuleRouter(module))
     
     def route_step(self, path):
@@ -128,12 +130,13 @@ class Router(core.RouterInterface):
 
 class ModuleRouter(Router):
 
-    def __init__(self, module, reload=False):
+    def __init__(self, module, reload=False, autoscan=True):
         self.module = module
         self.reload = reload
         self._last_mtime = self.getmtime()
         self._scanned = False
-        self._assert_scanned()
+        if autoscan:
+            self._assert_scanned()
         
     def getmtime(self):
         return os.path.getmtime(self.module.__file__)
@@ -151,7 +154,7 @@ class ModuleRouter(Router):
             self._apps = []
             main = getattr(self.module, '__app__', None)
             if main:
-                self.register('', main)
+                self.register(None, main)
         
     def route_step(self, path):
         self._assert_scanned()

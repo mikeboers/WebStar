@@ -136,3 +136,27 @@ class TestPattern(TestCase):
         p = Pattern('/{key}')
         self.assertEqual(p.identifiable(), True)
 
+    def test_empty_pattern(self):
+        p = Pattern('')
+        self.assertNotEqual(p.match(''), None)
+        self.assertEqual(p.match('/'), None)
+        self.assertEqual(p.match('/notempty'), None)
+        
+    def test_single_slash(self):
+        p = Pattern('/')
+        self.assertEqual(p.match(''), None)
+        self.assertNotEqual(p.match('/'), None)
+        self.assertEqual(p.match('/notempty'), None)
+        
+    def test_catchall(self):
+        p = Pattern(None)
+        self.assertNotEqual(p.match(''), None)
+        self.assertNotEqual(p.match('/'), None)
+        self.assertNotEqual(p.match('/notempty'), None)
+        
+    def test_larger(self):
+        p = Pattern('/notempty')
+        self.assertEqual(p.match(''), None)
+        self.assertEqual(p.match('/'), None)
+        self.assertNotEqual(p.match('/notempty'), None)
+            

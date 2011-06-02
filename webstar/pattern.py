@@ -21,9 +21,9 @@ class Pattern(core.PatternInterface):
         }
     ''', re.X)
 
-    def __init__(self, raw, **kwargs):
+    def __init__(self, pattern, **kwargs):
 
-        self._raw = raw
+        self._raw = pattern
         self._keys = set()
         super(Pattern, self).__init__(**kwargs)
         
@@ -34,7 +34,16 @@ class Pattern(core.PatternInterface):
             repr(self._raw).replace('\\\\', '\\'))
 
     def _compile(self):
-
+        
+        if self._raw is None:
+            self._compiled = self._format_string = None
+            return
+        
+        if self._raw in ('', '/'):
+            self._compiled = re.compile('^%s$' % self._raw)
+            self._format_string = self._raw
+            return
+        
         self._segments = {}
 
         format = self.token_re.sub(self._compile_sub, self._raw)
@@ -58,12 +67,15 @@ class Pattern(core.PatternInterface):
         self._segments[hash] = (name, patt, form)
         return hash
 
-    def _match(self, value):
-
-        m = self._compiled.match(value)
+    def _match(self, path):
+        
+        if self._compiled is None:
+            return {}, path
+        
+        m = self._compiled.match(path)
         if not m:
             return
-        return m.groupdict(), value[m.end():]
+        return m.groupdict(), path[m.end():]
 
     def identifiable(self):
         return bool(self.constants or self._keys)

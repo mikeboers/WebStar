@@ -55,24 +55,10 @@ class DummyModule(types.ModuleType):
     def __call__(self, name):
         self.__path__ = ['<fake>']
         return self.__class__(self.name + '.' + name)
+    
+    def __repr__(self):
+        return '<DummyModule %s>' % name
 
-
-
-def _assert_next_history_step(res, **kwargs):
-    environ_key = 'webstar.test.history_step_i'
-    environ = res.environ
-    # Notice that we are skipping the first one here
-    i = environ[environ_key] = environ.get(environ_key, 0) + 1
-    chunk = History.from_environ(environ)[i]
-
-    data = kwargs.pop('_data', None)
-
-    for k, v in kwargs.items():
-        v2 = getattr(chunk, k, None)
-        assert v == v2, 'on key %r: %r (expected) != %r (actual)' % (k, v, v2)
-
-    if data is not None:
-        assert dict(chunk.data) == data, '%r != %r' % (dict(chunk.data), data)
 
 
         

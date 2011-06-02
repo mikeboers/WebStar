@@ -62,11 +62,6 @@ into their raw URI representation.
 unsorted
 ---------
 
-- abstract base classes?
-
-- should there be a distinction between constants and defaults?
-	constants must be satisfied by format data
-
 - {*args} would catch slashes as well and then split on them
 
 ModuleRouter would pass on a '/', but the new Router does not.
