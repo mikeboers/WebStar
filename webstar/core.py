@@ -90,6 +90,9 @@ class GenerationError(ValueError):
     pass
 
 
+class FormatError(Exception):
+    pass
+
 class RouterInterface(object):
     __metaclass__ = abc.ABCMeta
     

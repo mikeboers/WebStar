@@ -1,15 +1,13 @@
-import re
 import hashlib
+import re
 
+from . import core
 
-class FormatError(Exception):
-    pass
-
-class FormatKeyError(FormatError, KeyError): pass
-class FormatMatchError(FormatError, ValueError): pass
-class FormatIncompleteMatchError(FormatError, ValueError): pass
-class FormatPredicateError(FormatError, ValueError): pass
-class FormatDataEqualityError(FormatError, ValueError): pass
+class FormatKeyError(core.FormatError, KeyError): pass
+class FormatMatchError(core.FormatError, ValueError): pass
+class FormatIncompleteMatchError(core.FormatError, ValueError): pass
+class FormatPredicateError(core.FormatError, ValueError): pass
+class FormatDataEqualityError(core.FormatError, ValueError): pass
 
 class Pattern(object):
 
