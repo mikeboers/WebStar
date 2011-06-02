@@ -11,7 +11,7 @@ import abc
 import collections
 import logging
 import posixpath
-
+import re
 
 log = logging.getLogger(__name__)
 
@@ -94,6 +94,101 @@ class GenerationError(ValueError):
 class FormatError(Exception):
     pass
 
+
+class PatternInterface(object):
+    __metaclass__ = abc.ABCMeta
+    
+    def __init__(self, *args, **kwargs):
+        
+        self.constants = kwargs
+        self.constants.update(kwargs.pop('constants', {}))
+        
+        self.predicates = []
+        
+        # Build predicates for nitrogen-style requirements.
+        nitrogen_requirements = kwargs.pop('_requirements', {})
+        if nitrogen_requirements:
+            def make_requirement_predicate(name, regex):
+                req_re = re.compile(regex + '$')
+                def predicate(data):
+                    return name in data and req_re.match(data[name])
+                return predicate
+            for name, regex in nitrogen_requirements.iteritems():
+                self.predicates.append(make_requirement_predicate(name, regex))
+        
+        # Build predicates for nitrogen-style parsers.
+        nitrogen_parsers = kwargs.pop('_parsers', {})
+        if nitrogen_parsers:
+            def make_parser_predicate(name, func):
+                def predicate(data):
+                    data[name] = func(data[name])
+                    return True
+                return predicate
+            for name, func in nitrogen_parsers.iteritems():
+                self.predicates.append(make_parser_predicate(name, func))
+        
+        self.predicates.extend(kwargs.pop('predicates', []))
+        
+        self.formatters = []
+        
+        nitrogen_formatters = kwargs.pop('_formatters', {})
+        if nitrogen_formatters:
+            def make_bc_formatter(name, func):
+                if isinstance(func, str):
+                    format = func
+                    func = lambda value: format % value
+                def formatter(data):
+                    data[name] = func(data[name])
+                return formatter
+            for name, format in nitrogen_formatters.iteritems():
+                self.formatters.append(make_bc_formatter(name, format))
+        
+        self.formatters.extend(kwargs.pop('formatters', []))
+        
+        super(PatternInterface, self).__init__(*args)
+        
+        
+    def match(self, path):
+        
+        m = self._match(path)
+        if not m:
+            return
+        
+        data, unmatched = m
+        
+        result = self.constants.copy()
+        result.update(data)
+
+        if not self._test_predicates(result):
+            return
+        
+        return result, unmatched
+    
+
+    @abc.abstractmethod
+    def _match(self, path):
+        '''Return (data, unmatched_path) if matches, else None.'''
+        return None
+    
+    @abc.abstractmethod
+    def identifiable(self):
+        '''Return True if this pattern is able to be specified by a data dict.
+        
+        Eg. if the pattern does not capture anything, nor does it enforce any
+        constants/invariants upon the data then it is not identifiable and
+        should not be used for URL generation.
+        
+        '''
+        return False
+    
+    @abc.abstractmethod
+    def format(self, data):
+        '''Return a string that would re-match to data that does not conflict.
+        
+        Ie. A pattern does not need to encode ALL of the data given to it to
+        format, but any data that it would recovered by rematching '''
+        pass
+    
 class RouterInterface(object):
     __metaclass__ = abc.ABCMeta
     
@@ -112,7 +207,6 @@ class RouterInterface(object):
         while False:
             yield None
         
-    
     
     def route(self, path):
         """Route a given path, starting at this router."""    

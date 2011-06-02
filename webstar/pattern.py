@@ -9,8 +9,10 @@ class FormatIncompleteMatchError(core.FormatError, ValueError): pass
 class FormatPredicateError(core.FormatError, ValueError): pass
 class FormatDataEqualityError(core.FormatError, ValueError): pass
 
-class Pattern(object):
+class Pattern(core.PatternInterface):
 
+    def identifiable(self): pass
+    
     default_pattern = '[^/]+'
     default_format = 's'
     
@@ -30,51 +32,7 @@ class Pattern(object):
 
         self._raw = raw
         self._keys = set()
-        
-        self.constants = kwargs
-        self.constants.update(kwargs.pop('constants', {}))
-        
-        self.predicates = []
-        
-        # Build predicates for nitrogen-style requirements.
-        nitrogen_requirements = kwargs.pop('_requirements', {})
-        if nitrogen_requirements:
-            def make_requirement_predicate(name, regex):
-                req_re = re.compile(regex + '$')
-                def predicate(data):
-                    return name in data and req_re.match(data[name])
-                return predicate
-            for name, regex in nitrogen_requirements.iteritems():
-                self.predicates.append(make_requirement_predicate(name, regex))
-        
-        # Build predicates for nitrogen-style parsers.
-        nitrogen_parsers = kwargs.pop('_parsers', {})
-        if nitrogen_parsers:
-            def make_parser_predicate(name, func):
-                def predicate(data):
-                    data[name] = func(data[name])
-                    return True
-                return predicate
-            for name, func in nitrogen_parsers.iteritems():
-                self.predicates.append(make_parser_predicate(name, func))
-        
-        self.predicates.extend(kwargs.pop('predicates', []))
-        
-        self.formatters = []
-        
-        nitrogen_formatters = kwargs.pop('_formatters', {})
-        if nitrogen_formatters:
-            def make_bc_formatter(name, func):
-                if isinstance(func, str):
-                    format = func
-                    func = lambda value: format % value
-                def formatter(data):
-                    data[name] = func(data[name])
-                return formatter
-            for name, format in nitrogen_formatters.iteritems():
-                self.formatters.append(make_bc_formatter(name, format))
-        
-        self.formatters.extend(kwargs.pop('formatters', []))
+        super(Pattern, self).__init__(**kwargs)
         
         self._compile()
 
@@ -108,7 +66,7 @@ class Pattern(object):
         self._segments[hash] = (name, patt, form)
         return hash
 
-    def match(self, value):
+    def _match(self, value):
         """Match this pattern against some text. Returns the matched data, and
         the unmatched string, or None if there is no match.
         """
@@ -117,13 +75,7 @@ class Pattern(object):
         if not m:
             return
 
-        result = self.constants.copy()
-        result.update(m.groupdict())
-
-        if not self._test_predicates(result):
-            return
-
-        return result, value[m.end():]
+        return m.groupdict(), value[m.end():]
 
     def _test_predicates(self, data):
         for func in self.predicates:
