@@ -161,6 +161,9 @@ class PatternInterface(object):
         
          
     def match(self, path):
+        """Match this pattern against some text. Returns the matched data, and
+        the unmatched string, or None if there is no match.
+        """
         
         m = self._match(path)
         if not m:
@@ -195,6 +198,14 @@ class PatternInterface(object):
     
         
     def format(self, **kwargs):
+        """Return a path which encodes some of the data in kwargs.
+        
+        The returned path will re-match to data that does not conflict with
+        the original arguments. A path does not need to encode ALL of the data
+        requested, but any data that it would recover by re-matching it would
+        not conflict.
+        
+        """
         data = self.constants.copy()
         data.update(kwargs)
 
@@ -223,10 +234,7 @@ class PatternInterface(object):
                 
     @abc.abstractmethod
     def _format(self, data):
-        '''Return a string that would re-match to data that does not conflict.
-        
-        Ie. A pattern does not need to encode ALL of the data given to it to
-        format, but any data that it would recovered by rematching '''
+        '''Return a string, None, or raise a FormatError'''
         pass
     
 class RouterInterface(object):

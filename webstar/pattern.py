@@ -62,14 +62,10 @@ class Pattern(core.PatternInterface):
         return hash
 
     def _match(self, value):
-        """Match this pattern against some text. Returns the matched data, and
-        the unmatched string, or None if there is no match.
-        """
 
         m = self._compiled.match(value)
         if not m:
             return
-
         return m.groupdict(), value[m.end():]
 
     
