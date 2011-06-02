@@ -347,7 +347,6 @@ class RouterInterface(object):
         '''.strip() % path_info]
         
     def generate(self, *args, **kwargs):
-        return '/fake'
         data = dict()
         for arg in args:
             data.update(arg)

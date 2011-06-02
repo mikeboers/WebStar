@@ -75,7 +75,7 @@ class TestDummyModules(TestCase):
     def test_basic(self):
         router = Router()
         print 'router', router
-        router.register_package(None, self.root, testing=True)
+        router.register_package(None, self.root, testing=True, include_self=True)
         self.app = TestApp(router)
         
         res = self.app.get('/')
@@ -89,7 +89,7 @@ class TestDummyModules(TestCase):
         
     def test_recursive(self):
         router = Router()
-        router.register_package(None, self.root, recursive=True, testing=True)
+        router.register_package(None, self.root, recursive=True, testing=True, include_self=True)
         self.app = TestApp(router)
 
         res = self.app.get('/')
@@ -109,7 +109,7 @@ class TestRealModules(TestCase):
         self.router = Router()
         self.app = TestApp(self.router)
         import examplepackage
-        self.router.register_package(None, examplepackage)
+        self.router.register_package(None, examplepackage, include_self=True)
         
     def test_default(self):
         res = self.app.get('/')
@@ -130,7 +130,7 @@ class TestRealRecursiveModules(TestRealModules):
         self.router = Router()
         self.app = TestApp(self.router)
         from . import examplepackage
-        self.router.register_package(None, examplepackage, recursive=True)
+        self.router.register_package(None, examplepackage, recursive=True, include_self=True)
     
     def test_leaf(self):
         res = self.app.get('/sub/leaf')
