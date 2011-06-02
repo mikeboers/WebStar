@@ -22,11 +22,9 @@ class Pattern(core.PatternInterface):
     ''', re.X)
 
     def __init__(self, pattern, **kwargs):
-
-        self._raw = pattern
-        self._keys = set()
         super(Pattern, self).__init__(**kwargs)
-        
+        self._raw = str(pattern or '')
+        self._keys = set()
         self._compile()
 
     def __repr__(self):
@@ -34,16 +32,6 @@ class Pattern(core.PatternInterface):
             repr(self._raw).replace('\\\\', '\\'))
 
     def _compile(self):
-        
-        if self._raw is None:
-            self._compiled = self._format_string = None
-            return
-        
-        if self._raw in ('', '/'):
-            self._compiled = re.compile('^%s$' % self._raw)
-            self._format_string = self._raw
-            return
-        
         self._segments = {}
 
         format = self.token_re.sub(self._compile_sub, self._raw)
@@ -67,11 +55,7 @@ class Pattern(core.PatternInterface):
         self._segments[hash] = (name, patt, form)
         return hash
 
-    def _match(self, path):
-        
-        if self._compiled is None:
-            return {}, path
-        
+    def _match(self, path):        
         m = self._compiled.match(path)
         if not m:
             return

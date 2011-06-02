@@ -31,7 +31,7 @@ class TestRouterBasics(TestCase):
         
     def test_static(self):
         res = self.app.get('/static')
-        self.assertEqual(res.body, "static; path_info='', script_name='/static'")
+        self.assertEqual(res.body, "static; path_info='/', script_name='/static'")
     
     def test_static_incomplete(self):
         res = self.app.get('/static/more')

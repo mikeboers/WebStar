@@ -62,6 +62,8 @@ into their raw URI representation.
 unsorted
 ---------
 
+- auto unslasher
+
 - {*args} would catch slashes as well and then split on them
 
 ModuleRouter would pass on a '/', but the new Router does not.

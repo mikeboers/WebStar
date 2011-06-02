@@ -22,8 +22,8 @@ HISTORY_ENVIRON_KEY = 'webstar.route'
 def normalize_path(*segments):
     path = '/'.join(x for x in segments if x)
     if not path:
-        return ''
-    return '/' + posixpath.normpath(path).lstrip('/')
+        return '/'
+    return '/' + posixpath.normpath(path).strip('/')
 
 
 GenerateStep = collections.namedtuple('GenerateStep', 'segment head'.split())
