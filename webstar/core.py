@@ -238,6 +238,8 @@ class PatternInterface(object):
 
         # Untested.
         for k, v in m.iteritems():
+            if k in self.constants and self.constants[k] != v:
+                raise FormatInvariantError('re-match resolved bad value for %r: got %r, require %r' % (k, v, data[k]))
             if k in data and data[k] != v:
                 raise FormatDataEqualityError('re-match resolved different value for %r: got %r, expected %r' % (k, v, data[k]))
         
