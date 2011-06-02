@@ -132,7 +132,6 @@ class Router(core.RouterInterface):
                 yield core.GenerateStep(segment=segment, head=node)
 
 
-
 class ModuleRouter(Router):
 
     def __init__(self, module, reload=False):
@@ -170,7 +169,4 @@ class ModuleRouter(Router):
 
     def __repr__(self):
         return '<%s.%s of %s>' % (self.__class__.__module__, self.__class__.__name__, self.module.__name__)
-
-    
-
 

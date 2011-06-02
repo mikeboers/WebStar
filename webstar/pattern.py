@@ -31,7 +31,6 @@ class Pattern(core.PatternInterface):
         
         self._compile()
 
-
     def __repr__(self):
         return '<%s:r%s>' % (self.__class__.__name__,
             repr(self._raw).replace('\\\\', '\\'))

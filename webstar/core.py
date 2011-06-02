@@ -81,7 +81,6 @@ class Route(list):
         return '<%s:%s>' % (self.__class__.__name__, list.__repr__(self))
         
 
-
 def get_route_data(environ):
     route = environ.get(HISTORY_ENVIRON_KEY, None)
     return route.data if route else {}
@@ -152,14 +151,12 @@ class PatternInterface(object):
         
         super(PatternInterface, self).__init__(*args)
         
-       
     def _test_predicates(self, data):
         for func in self.predicates:
             if not func(data):
                 return
         return True
-        
-         
+           
     def match(self, path):
         """Match this pattern against some text. Returns the matched data, and
         the unmatched string, or None if there is no match.
@@ -179,7 +176,6 @@ class PatternInterface(object):
         
         return result, unmatched
     
-
     @abc.abstractmethod
     def _match(self, path):
         '''Return (data, unmatched_path) if matches, else None.'''
@@ -196,7 +192,6 @@ class PatternInterface(object):
         '''
         return False
     
-        
     def format(self, **kwargs):
         """Return a path which encodes some of the data in kwargs.
         
@@ -237,6 +232,7 @@ class PatternInterface(object):
         '''Return a string, None, or raise a FormatError'''
         pass
     
+    
 class RouterInterface(object):
     __metaclass__ = abc.ABCMeta
     
@@ -255,7 +251,6 @@ class RouterInterface(object):
         while False:
             yield None
         
-    
     def route(self, path):
         """Route a given path, starting at this router."""    
         path = normalize_path(path)
@@ -326,16 +321,4 @@ class RouterInterface(object):
         if _strict and not url:
             raise GenerationError('could not generate URL for %r' % data)
         return url
-
-
-
-        
-
-
-
-
-
-
-
-        
 
