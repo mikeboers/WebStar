@@ -103,4 +103,16 @@ class TestPattern(TestCase):
         self.assertEqual(p.format(key='value'), '/value')
         self.assertRaises(KeyError, p.format, notakey='value')
         self.assertRaises(FormatKeyError, p.format, notakey='value')
+    
+    def test_constant_errors(self):
+        p = Pattern('/{key}', constants=dict(key='value'))
+        self.assertEqual(p.format(), '/value')
+        self.assertEqual(p.format(key='value'), '/value')
+        self.assertRaises(FormatInvariantError, p.format, key='notvalue')
+        
+    def test_defaults(self):
+        p = Pattern('/{key}', defaults=dict(key='value'))
+        self.assertEqual(p.format(), '/value')
+        self.assertEqual(p.format(key='value'), '/value')
+        self.assertEqual(p.format(key='notvalue'), '/notvalue')
 

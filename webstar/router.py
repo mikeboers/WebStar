@@ -119,11 +119,6 @@ class Router(core.RouterInterface):
             if not (pattern._keys or pattern.constants):
                 continue
             
-            # Filter out mismatched constant data.
-            if any(k in data and data[k] != v for k, v in
-                pattern.constants.iteritems()):
-                continue
-            
             try:
                 segment = pattern.format(**data)
             except core.FormatError:

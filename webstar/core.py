@@ -93,6 +93,7 @@ class GenerationError(ValueError):
 class FormatError(Exception):
     pass
 class FormatKeyError(FormatError, KeyError): pass
+class FormatInvariantError(FormatError, ValueError): pass
 class FormatMatchError(FormatError, ValueError): pass
 class FormatIncompleteMatchError(FormatError, ValueError): pass
 class FormatPredicateError(FormatError, ValueError): pass
@@ -102,10 +103,33 @@ class FormatDataEqualityError(FormatError, ValueError): pass
 class PatternInterface(object):
     __metaclass__ = abc.ABCMeta
     
+    @abc.abstractmethod
+    def _match(self, path):
+        '''Return (data, unmatched_path) if matches, else None.'''
+        return None
+    
+    @abc.abstractmethod
+    def identifiable(self):
+        '''Return True if this pattern is able to be specified by a data dict.
+        
+        Eg. if the pattern does not capture anything, nor does it enforce any
+        constants/invariants upon the data then it is not identifiable and
+        should not be used for URL generation.
+        
+        '''
+        return False 
+        
+    @abc.abstractmethod
+    def _format(self, data):
+        '''Return a string, None, or raise a FormatError'''
+        pass
+        
     def __init__(self, *args, **kwargs):
         
         self.constants = kwargs
         self.constants.update(kwargs.pop('constants', {}))
+        
+        self.defaults = kwargs.pop('defaults', {})
         
         self.predicates = []
         
@@ -176,21 +200,7 @@ class PatternInterface(object):
         
         return result, unmatched
     
-    @abc.abstractmethod
-    def _match(self, path):
-        '''Return (data, unmatched_path) if matches, else None.'''
-        return None
-    
-    @abc.abstractmethod
-    def identifiable(self):
-        '''Return True if this pattern is able to be specified by a data dict.
-        
-        Eg. if the pattern does not capture anything, nor does it enforce any
-        constants/invariants upon the data then it is not identifiable and
-        should not be used for URL generation.
-        
-        '''
-        return False
+
     
     def format(self, **kwargs):
         """Return a path which encodes some of the data in kwargs.
@@ -201,8 +211,14 @@ class PatternInterface(object):
         not conflict.
         
         """
-        data = self.constants.copy()
+        
+        if any(k in kwargs and kwargs[k] != v for k, v in
+            self.constants.iteritems()):
+            raise FormatInvariantError('supplied data does not match constants')
+            
+        data = self.defaults.copy()
         data.update(kwargs)
+        data.update(self.constants)
 
         for func in self.formatters:
             func(data)
@@ -226,11 +242,7 @@ class PatternInterface(object):
                 raise FormatDataEqualityError('re-match resolved different value for %r: got %r, expected %r' % (k, v, data[k]))
         
         return out
-                
-    @abc.abstractmethod
-    def _format(self, data):
-        '''Return a string, None, or raise a FormatError'''
-        pass
+               
     
     
 class RouterInterface(object):
