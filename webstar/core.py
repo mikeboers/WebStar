@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
 HISTORY_ENVIRON_KEY = 'webstar.route'
 
 
+    
+    
 def normalize_path(*segments):
     path = '/'.join(x for x in segments if x)
     if not path:
@@ -291,7 +293,17 @@ class RouterInterface(object):
     
     def __call__(self, environ, start):
         
-        route = self.route(environ.get('PATH_INFO', ''))
+        path_info = environ.get('PATH_INFO', '')
+        normalized = normalize_path(path_info)
+        if path_info and path_info != normalized:
+            log.info('redirecting to normalize %r' % path_info)
+            start('301 Moved Permanently', [
+                ('Location', normalized),
+                ('Content-Type', 'text/plain'),
+            ])
+            return ['''Your request is being redirected to the canonical location: %r''' % normalized]
+        
+        route = self.route(path_info)
         if route is None:
             return self.not_found_app(environ, start)
         
