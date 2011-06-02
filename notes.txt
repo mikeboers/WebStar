@@ -62,6 +62,24 @@ into their raw URI representation.
 unsorted
 ---------
 
+
+
+ModuleRouter would pass on a '/', but the new Router does not.
+	- the nitrogen ReRouter wrapper could intercept '/' and turn that into something else
+	- could have a 'final' keyword which would turn the end into '$' instead of '/|$'
+		- register('', final=True)
+	- could have a special '$' pattern which represents the end
+	
+	- solution 2
+		- '' matches '^$'
+		- '/' matches '^/$'
+		- webstar.pattern.NON_EMPTY pattern matches everything that isn't empty
+		- a webstar.pattern.ANY pattern matches everything
+		- any strings that start with a '/' are passed to the RePattern (renamed Pattern)
+		
+		
+		
+		
 constants for module names
 	data_key='module'
 
