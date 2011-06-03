@@ -62,38 +62,17 @@ into their raw URI representation.
 unsorted
 ---------
 
-- go back to '' matching empty and '/' matching trailing slash?
+- need to be more careful about what routes we don't generate through
+	- passthroughs should be allowed if they are going to other routers
+	- unidentifiable leafs are okay if they are the only ones
+	- should prioritize more data coming out
+
+- perhaps identifiable should change to is_ambiguous: if a parent is identifiable and it only has one not identifiable child, then that is not ambiguous
 
 - get st5.com generation working
 	module data keys?
 
-- {*args} would catch slashes as well and then split on them
-
-ModuleRouter would pass on a '/', but the new Router does not.
-	- the nitrogen ReRouter wrapper could intercept '/' and turn that into something else
-	
-	Can have different pattern classes which are each able to tell if a given input is for their type
-	
-		WildcardPattern would match everything
-			- this would be the default for None
-		StringPattern would be for straight equality
-			- must start with '/' or be empty.
-			- EMPTY would be StringPattern('')
-		RePattern would be for the classic usage
-		
-		- these classes must have a common interface
-		- the code which decides if it can pass over 
-	- '' matches '^$'
-	- '/' matches '^/$'
-	- webstar.pattern.NON_EMPTY pattern matches everything that isn't empty
-	- a webstar.pattern.ANY pattern matches everything
-	- any strings that start with a '/' are passed to the RePattern (renamed Pattern)
-		
-		
-		
-		
-constants for module names
-	data_key='module'
+- {*args} could catch slashes as well and then split on them
 
 if supplied data is a list after formatters, and there is a constant or a key
 the use the first item in the list and pop it off

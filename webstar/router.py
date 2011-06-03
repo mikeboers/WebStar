@@ -47,11 +47,15 @@ class Router(core.RouterInterface):
         # work later.
         return functools.partial(self.register, pattern, **kwargs)
 
-    def register_package(self, pattern, package, reload=False,
-        recursive=False, testing=False, data_key=None, include_self=False):
+    def register_package(self, pattern, package,
+        recursive=False, testing=False, include_self=False, data_key=None,
+        **kwargs):
+        
         if isinstance(package, basestring):
             package = __import__(package, fromlist=['hack'])
-            
+        
+        data_key = data_key or package.__name__.replace('.', '_')
+        
         module_names = set()
         
         # Look for unloaded modules.
@@ -72,7 +76,9 @@ class Router(core.RouterInterface):
         
         # Look for already imported modules; essentially for testing.
         if testing:
-            for name in sys.modules:
+            for name, mod in sys.modules.iteritems():
+                if mod is None or name != mod.__name__:
+                    continue
                 if name.startswith(package.__name__ + '.'):
                     module_names.add(name[len(package.__name__)+1:].split('.', 1)[0])
         
@@ -86,26 +92,27 @@ class Router(core.RouterInterface):
                 else:
                     raise
             else:
-                subpattern = core.normalize_path(pattern, name)
+                subpattern = core.normalize_path(pattern, '{%s:%s}' % (data_key, name))
                 if recursive and (
                     hasattr(module, '__path__') or
                     module.__file__.endswith('/__import__.py') or
                     module.__file__.endswith('/__import__.pyc')
                 ):
                     self.register_package(subpattern, module,
-                        reload=reload,
                         recursive=recursive,
-                        testing=testing,
                         include_self=include_self,
+                        **kwargs
                     )
                 else:
-                    self.register_module(subpattern, module, reload=reload)
+                    self.register_module(subpattern, module, **kwargs)
         
         if include_self:
-            self.register_module(pattern, package)
+            self.register_module(pattern, package, **kwargs)
     
-    def register_module(self, pattern, module, reload=False):
-        self.register(pattern, ModuleRouter(module, reload=reload))
+    def register_module(self, pattern, module, reload=False, **kwargs):
+        if isinstance(module, str):
+            module = __import__(module, fromlist=['hack'])
+        self.register(pattern, ModuleRouter(module, reload=reload), **kwargs)
     
     def route_step(self, path):
         for _, pattern, node in self._apps:
@@ -124,7 +131,7 @@ class Router(core.RouterInterface):
         # log.debug('generate_step(%r, %r)' % (self, data))
         for _, pattern, node in self._apps:
             
-            if not pattern.identifiable():
+            if not isinstance(node, core.RouterInterface) and not pattern.identifiable():
                 continue
             
             try:
