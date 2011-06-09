@@ -101,6 +101,7 @@ class Router(core.RouterInterface):
                     self.register_package(subpattern, module,
                         recursive=recursive,
                         include_self=include_self,
+                        testing=testing,
                         **kwargs
                     )
                 else:
