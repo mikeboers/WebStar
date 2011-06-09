@@ -62,12 +62,24 @@ into their raw URI representation.
 unsorted
 ---------
 
-- need to be more careful about what routes we don't generate through
-	- passthroughs should be allowed if they are going to other routers
-	- unidentifiable leafs are okay if they are the only ones
-	- should prioritize more data coming out
+- perhaps a method on a router to spread around the knowledge of keys
+	- all children will have a None where others matched a pattern or they had constants
+	- this needs to be done in such a way that otherwise unidentifiable patterns magically become identifiable via the None
 
-- perhaps identifiable should change to is_ambiguous: if a parent is identifiable and it only has one not identifiable child, then that is not ambiguous
+- somehow _constants should become not-identifiable. perhaps identifiable should change to be "identified" so that if no matching constants are given then it doesn't count as identified
+
+- remove get_data_for
+
+
+- url_for(_query=dict(key='value')) -> '...?key=value'
+- url_for(_fragment='name') -> '...#name'
+
+
+
+
+
+- root.url_for(year='2010', month='04') requires strings. if you pass ints it
+  doesnt pass the rematch check validatoin
 
 - get st5.com generation working
 	module data keys?

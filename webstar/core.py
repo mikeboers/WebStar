@@ -28,22 +28,32 @@ def normalize_path(*segments):
     return '/' + posixpath.normpath(path).strip('/')
 
 
-GenerateStep = collections.namedtuple('GenerateStep', 'segment head'.split())
 
 
 _RouteStep = collections.namedtuple('RouteStep', 'head consumed unrouted data router')
 class RouteStep(_RouteStep):
     def __new__(cls, **kwargs):
         with_defaults = dict(
-            head=None,
             consumed='',
-            unrouted='',
             data={},
-            router=None
         )
         with_defaults.update(kwargs)
         return super(RouteStep, cls).__new__(cls, **with_defaults)
 del _RouteStep
+
+
+_GenerateStep = collections.namedtuple('GenerateStep', 'segment head identifiable')
+class GenerateStep(_GenerateStep):
+    def __new__(cls, **kwargs):
+        with_defaults = dict(
+            identifiable=False,
+        )
+        with_defaults.update(kwargs)
+        return super(GenerateStep, cls).__new__(cls, **with_defaults)
+del _GenerateStep
+
+
+GenerateStepMeta = collections.namedtuple('GenerateStepMeta', 'ambiguous')
 
 
 class Route(list):
@@ -317,17 +327,17 @@ class RouterInterface(object):
     
     def _route(self, node, path, depth):
         if not isinstance(node, RouterInterface):
-            log.debug('%d: found leaf -> %r' % (depth, node))
+            # log.debug('%d: found leaf -> %r' % (depth, node))
             return []
-        log.debug('%d: trying %r with %r' % (depth, path, node))
+        # log.debug('%d: trying %r with %r' % (depth, path, node))
         for step in node.route_step(path):
             res = self._route(step.head, step.unrouted, depth + 1)
             if res is not None:
-                log.debug('%d: got %r' % (depth, res))
+                # log.debug('%d: got %r' % (depth, res))
                 return [step] + res
             else:
                 pass
-                log.debug('%d: deadend' % (depth, ))
+                # log.debug('%d: deadend' % (depth, ))
     
     def __call__(self, environ, start):
         
@@ -389,20 +399,38 @@ class RouterInterface(object):
         for arg in args:
             data.update(arg)
         data.update(kwargs)
-        steps = self._generate(self, data)
-        if not steps:
-            return
-        return normalize_path('/'.join(step.segment for step in steps))
+        log.debug('starting URL generation with %r' % data)
+        for steps in self._generate(self, data, 0):
+            
+            # Reject ambiguous paths: any trailing unidentifiable segments
+            # must not be ambiguous.
+            reject = True
+            for step, meta in reversed(steps):
+                if step.identifiable:
+                    reject = False
+                    break
+                if meta.ambiguous:
+                    break
+            if reject:
+                log.debug('reject ambiguous candidate %r' % [step for step, meta in steps])
+                continue
+            
+            log.debug('generated %r' % steps)
+            return normalize_path('/'.join(step.segment for step, meta in steps))
 
-    def _generate(self, node, data):
+    def _generate(self, node, data, depth):
         data = data.copy()
-        # log.debug('_generate: %r, %r' % (node, data))
+        log.debug('%d: %r' % (depth, node))
         if not isinstance(node, RouterInterface):
-            return []
-        for step in node.generate_step(data):
-            res = self._generate(step.head, data)
-            if res is not None:
-                return [step] + res
+            log.debug('%d: leaf %r' % (depth, node))
+            yield []
+            return
+        steps = list(node.generate_step(data))    
+        meta = GenerateStepMeta(ambiguous=len(steps) != 1)
+        for step in steps:
+            log.debug('%d: got %r' % (depth, step.segment))
+            for sub_steps in self._generate(step.head, data, depth + 1):
+                yield [(step, meta)] + sub_steps
                 
     def url_for(self, _strict=True, **data):
         url = self.generate(data)

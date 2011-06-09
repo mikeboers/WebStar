@@ -39,11 +39,13 @@ class Router(core.RouterInterface):
             # priority of apps relative to each other, but in the case of
             # multiple apps at the same priority, respect the registration
             # order.
-            priority = (-kwargs.pop('_priority', 0), len(self._apps))
-            insort(self._apps, (priority, patmod.Pattern(pattern, **kwargs), app))
             
-            # log.debug('register %r -> %r' % (pattern, app))
-                
+            priority = (-kwargs.pop('_priority', 0), len(self._apps))
+            pattern = patmod.Pattern(pattern, **kwargs)
+            insort(self._apps, (priority, pattern, app))
+            
+            log.debug('register %r -> %r' % (pattern, app))
+            
             return app
 
         # We are not being used directly, so return a decorator to do the
@@ -57,7 +59,7 @@ class Router(core.RouterInterface):
         if isinstance(package, basestring):
             package = __import__(package, fromlist=['hack'])
         
-        data_key = data_key or package.__name__.replace('.', '_')
+        data_key = data_key or '_'.join(reversed(package.__name__.split('.')))
         
         module_names = set()
         
@@ -105,6 +107,7 @@ class Router(core.RouterInterface):
                         recursive=recursive,
                         include_self=include_self,
                         testing=testing,
+                        data_key=name + '_' + data_key,
                         **kwargs
                     )
                 else:
@@ -132,18 +135,18 @@ class Router(core.RouterInterface):
                 )
 
     def generate_step(self, data):
-        # log.debug('generate_step(%r, %r)' % (self, data))
         for _, pattern, node in self._apps:
-            
-            if not isinstance(node, core.RouterInterface) and not pattern.identifiable():
-                continue
-            
+
             try:
                 segment = pattern.format(**data)
             except core.FormatError:
                 pass
             else:    
-                yield core.GenerateStep(segment=segment, head=node)
+                yield core.GenerateStep(
+                    segment=segment,
+                    head=node,
+                    identifiable=pattern.identifiable(),
+                )
 
 
 class ModuleRouter(core.RouterInterface):
@@ -165,7 +168,7 @@ class ModuleRouter(core.RouterInterface):
             if self._last_mtime != mtime:
                 self._last_mtime = mtime
                 self._app = None
-                log.debug('reloading module %r' % self.module.__name__)
+                # log.debug('reloading module %r' % self.module.__name__)
                 reload(self.module)
                 self._scanned = False
         if not self._scanned:
@@ -187,7 +190,6 @@ class ModuleRouter(core.RouterInterface):
             router=self,
             consumed='',
             unrouted=path,
-            data={}
         )
 
     def generate_step(self, data): 
