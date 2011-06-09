@@ -143,7 +143,7 @@ class Router(core.RouterInterface):
                 yield core.GenerateStep(segment=segment, head=node)
 
 
-class ModuleRouter(Router):
+class ModuleRouter(core.RouterInterface):
 
     def __init__(self, module, reload=False, autoscan=True):
         self.module = module
@@ -152,7 +152,7 @@ class ModuleRouter(Router):
         self._scanned = False
         if autoscan:
             self._assert_scanned()
-        
+    
     def getmtime(self):
         return os.path.getmtime(self.module.__file__)
 
@@ -167,19 +167,25 @@ class ModuleRouter(Router):
                 self._scanned = False
         if not self._scanned:
             self._scanned = True
-            self._apps = []
-            main = getattr(self.module, '__app__', None)
-            if main:
-                self.register('', main)
-        
+            self._app = getattr(self.module, '__app__', None)
     def route_step(self, path):
         self._assert_scanned()
-        return super(ModuleRouter, self).route_step(path)
+        if not self._app:
+            return
+        yield core.RouteStep(
+            head=self._app,
+            router=self,
+            consumed='',
+            unrouted=path,
+            data={}
+        )
 
     def generate_step(self, data): 
         self._assert_scanned()
-        return super(ModuleRouter, self).generate_step(data)
+        if not self._app:
+            return
+        yield core.GenerateStep(segment='', head=self._app)
 
     def __repr__(self):
-        return '<%s.%s of %s>' % (self.__class__.__module__, self.__class__.__name__, self.module.__name__)
+        return '<%s of %r>' % (self.__class__.__name__, self.module.__name__)
 
