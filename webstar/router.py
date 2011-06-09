@@ -19,7 +19,10 @@ class Router(core.RouterInterface):
 
     def __init__(self):
         self._apps = []
-
+        
+    def children(self):
+        return [(pattern.identifiable(), pattern._raw, node) for _, pattern, node in self._apps]
+        
     def register(self, pattern, app=None, **kwargs):
         """Register directly, or use as a decorator.
 
@@ -168,6 +171,13 @@ class ModuleRouter(core.RouterInterface):
         if not self._scanned:
             self._scanned = True
             self._app = getattr(self.module, '__app__', None)
+    
+    def children(self):
+        self._assert_scanned()
+        if not self._app:
+            return []
+        return [(False, None, self._app)]
+    
     def route_step(self, path):
         self._assert_scanned()
         if not self._app:

@@ -266,6 +266,30 @@ class RouterInterface(object):
         """Yield a GenerateStep for each possible route from this node."""
         while False:
             yield None
+    
+    def children(self):
+        """Return a list of tuples for each child: (identifiable, pattern, node)"""
+        return []
+    
+    def print_graph(self):
+        print self
+        self._print_graph(1, set())
+    
+    def _print_graph(self, depth, visited):            
+        for idable, pattern, node in self.children():
+            is_router = isinstance(node, RouterInterface)
+            print ('    ' * depth), '%s %s: %r' % (
+                ('+' if idable else '-') + ('>' if is_router else ''),
+                repr(pattern) if pattern else '*',
+                node
+            )
+            
+            if is_router:
+                if node in visited:
+                    print ('    ' * (depth + 1)), '*** CYCLE to %r' % node
+                else:
+                    visited.add(node)
+                    node._print_graph(depth + 1, visited)
         
     def route(self, path):
         """Route a given path, starting at this router."""    
