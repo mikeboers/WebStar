@@ -29,7 +29,21 @@ def normalize_path(*segments):
 
 
 GenerateStep = collections.namedtuple('GenerateStep', 'segment head'.split())
-RouteStep = collections.namedtuple('RouteStep', 'head consumed unrouted data router')
+
+
+_RouteStep = collections.namedtuple('RouteStep', 'head consumed unrouted data router')
+class RouteStep(_RouteStep):
+    def __new__(cls, **kwargs):
+        with_defaults = dict(
+            head=None,
+            consumed='',
+            unrouted='',
+            data={},
+            router=None
+        )
+        with_defaults.update(kwargs)
+        return super(RouteStep, cls).__new__(cls, **with_defaults)
+del _RouteStep
 
 
 class Route(list):
