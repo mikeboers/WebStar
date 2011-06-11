@@ -44,7 +44,7 @@ class Router(core.RouterInterface):
             pattern = patmod.Pattern(pattern, **kwargs)
             insort(self._apps, (priority, pattern, app))
             
-            log.debug('register %r -> %r' % (pattern, app))
+            # log.debug('register %r -> %r' % (pattern, app))
             
             return app
 

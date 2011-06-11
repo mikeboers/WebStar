@@ -399,7 +399,7 @@ class RouterInterface(object):
         for arg in args:
             data.update(arg)
         data.update(kwargs)
-        log.debug('starting URL generation with %r' % data)
+        # log.debug('starting URL generation with %r' % data)
         for steps in self._generate(self, data, 0):
             
             # Reject ambiguous paths: any trailing unidentifiable segments
@@ -412,23 +412,23 @@ class RouterInterface(object):
                 if meta.ambiguous:
                     break
             if reject:
-                log.debug('reject ambiguous candidate %r' % [step for step, meta in steps])
+                # log.debug('reject ambiguous candidate %r' % [step for step, meta in steps])
                 continue
             
-            log.debug('generated %r' % steps)
+            # log.debug('generated %r' % steps)
             return normalize_path('/'.join(step.segment for step, meta in steps))
 
     def _generate(self, node, data, depth):
         data = data.copy()
-        log.debug('%d: %r' % (depth, node))
+        # log.debug('%d: %r' % (depth, node))
         if not isinstance(node, RouterInterface):
-            log.debug('%d: leaf %r' % (depth, node))
+            # log.debug('%d: leaf %r' % (depth, node))
             yield []
             return
         steps = list(node.generate_step(data))    
         meta = GenerateStepMeta(ambiguous=len(steps) != 1)
         for step in steps:
-            log.debug('%d: got %r' % (depth, step.segment))
+            # log.debug('%d: got %r' % (depth, step.segment))
             for sub_steps in self._generate(step.head, data, depth + 1):
                 yield [(step, meta)] + sub_steps
                 
