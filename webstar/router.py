@@ -54,7 +54,7 @@ class Router(core.RouterInterface):
 
     def register_package(self, pattern, package,
         recursive=False, testing=False, include_self=False, data_key=None,
-        **kwargs):
+        include_protected=False, **kwargs):
         
         if isinstance(package, basestring):
             package = __import__(package, fromlist=['hack'])
@@ -88,6 +88,8 @@ class Router(core.RouterInterface):
                     module_names.add(name[len(package.__name__)+1:].split('.', 1)[0])
         
         for name in sorted(module_names):
+            if name.startswith('_') and not include_protected:
+                continue
             try:
                 module_name = package.__name__ + '.' + name
                 module = __import__(module_name, fromlist=['hack'])
@@ -108,6 +110,7 @@ class Router(core.RouterInterface):
                         include_self=include_self,
                         testing=testing,
                         data_key=name + '_' + data_key,
+                        include_protected=include_protected,
                         **kwargs
                     )
                 else:
