@@ -288,15 +288,6 @@ class PatternInterface(object):
 class RouterInterface(object):
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self, *args, **kwargs):
-        self.predicates = []
-    
-    def _test_predicates(self, route):
-        for func in self.predicates:
-            if not func(route):
-                return
-        return True
-    
     def __repr__(self):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
@@ -345,8 +336,6 @@ class RouterInterface(object):
         if not steps:
             return
         route = Route(path, self, steps)
-        if not self._test_predicates(route):
-            return
         return route
     
     def _route(self, node, path, depth):
@@ -363,20 +352,16 @@ class RouterInterface(object):
                 pass
                 # log.debug('%d: deadend' % (depth, ))
     
-    def __call__(self, environ, start):
+    def wsgi_route(self, environ):
         
         path_info = environ.get('PATH_INFO', '')
         normalized = normalize_path(path_info)
         if path_info and path_info != normalized:
-            res = self.not_normalized_app(environ, start, normalized)
-            if res:
-                return res
+            return self.make_not_normalized_app(normalized)
             
         route = self.route(path_info)
         if route is None:
-            res = self.not_found_app(environ, start)
-            if res:
-                return res
+            return self.not_found_app
         
         # Build up wsgi.routing_args data
         args, kwargs = environ.setdefault('wsgiorg.routing_args', ((), {}))
@@ -387,23 +372,28 @@ class RouterInterface(object):
         environ['PATH_INFO'] = route.unrouted
         environ['SCRIPT_NAME'] = environ.get('SCRIPT_NAME', '') + route.consumed
         
-        return route.app(environ, start)
+        return route.app
     
-    def not_normalized_app(self, environ, start, normalized):
-        path_info = environ.get('PATH_INFO')
-        log.info('redirecting via 301 to normalize %r' % path_info)
-        start('301 Moved Permanently', [
-            ('Location', normalized),
-            ('Content-Type', 'text/plain'),
-        ])
-        return ['''
-<html><head> 
-<title>301 Moved Permanently</title> 
-</head><body> 
-<h1>Malformed URL</h1> 
-<p>Your requested URL (%s) is being redirected to the canonical location (%s).</p> 
-</body></html>
-        '''.strip() % (path_info, normalized)]
+    def __call__(self, environ, start):
+        return self.wsgi_route(environ)(environ, start)
+    
+    def make_not_normalized_app(self, normalized):
+        def _not_normalized_app(environ, start):
+            path_info = environ.get('PATH_INFO')
+            log.info('redirecting via 301 to normalize %r' % path_info)
+            start('301 Moved Permanently', [
+                ('Location', normalized),
+                ('Content-Type', 'text/plain'),
+            ])
+            return ['''
+    <html><head> 
+    <title>301 Moved Permanently</title> 
+    </head><body> 
+    <h1>Malformed URL</h1> 
+    <p>Your requested URL (%s) is being redirected to the canonical location (%s).</p> 
+    </body></html>
+            '''.strip() % (path_info, normalized)]
+        return _not_normalized_app
         
     def not_found_app(self, environ, start):
         path_info = environ.get('PATH_INFO')
