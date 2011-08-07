@@ -62,10 +62,10 @@ class Route(list):
     def from_environ(environ):
         return environ.get(HISTORY_ENVIRON_KEY)
     
-    def __init__(self, path, steps):
+    def __init__(self, path, root, steps):
         self.append(RouteStep(
             unrouted=path,
-            head=None,
+            head=root,
             consumed=None,
             data={},
             router=None,
@@ -229,7 +229,8 @@ class PatternInterface(object):
         
         data, unmatched = m
         
-        result = self.constants.copy()
+        result = self.defaults.copy()
+        result.update(self.constants)
         result.update(data)
 
         if not self._test_predicates(result):
@@ -343,7 +344,7 @@ class RouterInterface(object):
         # log.debug('done')
         if not steps:
             return
-        route = Route(path, steps)
+        route = Route(path, self, steps)
         if not self._test_predicates(route):
             return
         return route
