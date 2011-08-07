@@ -12,6 +12,8 @@ import collections
 import logging
 import posixpath
 import re
+import sys
+
 
 log = logging.getLogger(__name__)
 
@@ -461,6 +463,12 @@ def get_route_attr_list(route, name):
         # In the route data.
         values.extend(step.data.get(name, []))
         # In attribute on the module if from register_module.
-        values.extend(getattr(step.data.get('__module__', None), name, []))
+        module = step.data.get('__module__', None)
+        if module:
+            values.extend(getattr(module, name, []))
+            # And finally packages.
+            pkg_name = module.__package__
+            if pkg_name and pkg_name != module.__name__:
+                values.extend(getattr(sys.modules[pkg_name], name, []))
     return values
     
