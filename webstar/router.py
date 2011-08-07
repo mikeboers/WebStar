@@ -134,8 +134,8 @@ class Router(core.RouterInterface):
         if isinstance(module, str):
             module = __import__(module, fromlist=['hack'])
             
-        router = self.__class__()
-        self.register(pattern, router)
+        router = module.__router__ = self.__class__()
+        self.register(pattern, router, defaults=dict(__module__=module))
         
         routes = [x for x in module.__dict__.itervalues() if hasattr(x, '__route_args__')]
         routes.sort(key=lambda x: x.__route_args__)
