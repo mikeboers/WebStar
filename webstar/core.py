@@ -35,7 +35,6 @@ class RouteStep(_RouteStep):
     def __new__(cls, **kwargs):
         with_defaults = dict(
             consumed='',
-            unrouted='',
             data={},
         )
         with_defaults.update(kwargs)
@@ -72,6 +71,17 @@ class Route(list):
             router=None,
         ))
         self.extend(steps)
+    
+    def step(self, head, consumed='', unrouted=None, data=None, router=None):
+        if unrouted is None and self.unrouted.startswith(consumed):
+            unrouted = normalize_path(self.unrouted[len(consumed):])
+        self.append(RouteStep(
+            unrouted=unrouted or '',
+            head=head,
+            consumed=consumed,
+            data=data or {},
+            router=router
+        ))
     
     def url_for(self, _strict=True, **kwargs):
         for i, chunk in enumerate(self):
@@ -331,9 +341,12 @@ class RouterInterface(object):
         # log.debug('starting route for %r' % path)
         steps = self._route(self, path, 0)
         # log.debug('done')
-        if not steps or not self._test_predicates(steps):
+        if not steps:
             return
-        return Route(path, steps)
+        route = Route(path, steps)
+        if not self._test_predicates(route):
+            return
+        return route
     
     def _route(self, node, path, depth):
         if not isinstance(node, RouterInterface):
