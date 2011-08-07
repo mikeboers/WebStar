@@ -141,7 +141,6 @@ class Router(core.RouterInterface):
         routes.sort(key=lambda x: x.__route_args__)
         for func in routes:
             _, sub_pattern, sub_kwargs = func.__route_args__
-            log.info('discovered %r via %r, %r' % (func, sub_pattern, sub_kwargs))
             router.register(sub_pattern, func, **sub_kwargs)
             
         default = getattr(module, '__app__', None)
