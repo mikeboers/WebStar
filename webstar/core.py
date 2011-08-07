@@ -452,3 +452,15 @@ class RouterInterface(object):
             raise GenerationError('could not generate URL for %r' % data)
         return url
 
+
+def get_route_attr_list(route, name):
+    values = []
+    for step in reversed(route):
+        # The router or final app.
+        values.extend(getattr(step.head, name, []))
+        # In the route data.
+        values.extend(step.data.get(name, []))
+        # In attribute on the module if from register_module.
+        values.extend(getattr(step.data.get('__module__', None), name, []))
+    return values
+    
