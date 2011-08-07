@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 class Router(core.RouterInterface):
 
     def __init__(self):
+        super(Router, self).__init__()
         self._apps = []
         
     def children(self):

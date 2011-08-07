@@ -35,6 +35,7 @@ class RouteStep(_RouteStep):
     def __new__(cls, **kwargs):
         with_defaults = dict(
             consumed='',
+            unrouted='',
             data={},
         )
         with_defaults.update(kwargs)
@@ -276,6 +277,15 @@ class PatternInterface(object):
 class RouterInterface(object):
     __metaclass__ = abc.ABCMeta
     
+    def __init__(self, *args, **kwargs):
+        self.predicates = []
+    
+    def _test_predicates(self, route):
+        for func in self.predicates:
+            if not func(route):
+                return
+        return True
+    
     def __repr__(self):
         return '<%s at 0x%x>' % (self.__class__.__name__, id(self))
     
@@ -321,7 +331,7 @@ class RouterInterface(object):
         # log.debug('starting route for %r' % path)
         steps = self._route(self, path, 0)
         # log.debug('done')
-        if not steps:
+        if not steps or not self._test_predicates(steps):
             return
         return Route(path, steps)
     
