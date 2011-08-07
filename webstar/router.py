@@ -15,6 +15,16 @@ from . import pattern as patmod
 log = logging.getLogger(__name__)
 
 
+# Decorator for tagging routes in modules.
+def route(pattern, **kwargs):
+    def _route(func):
+        route._counter += 1
+        func.__route_args__ = (route._counter, pattern, kwargs)
+        return func
+    return _route
+route._counter = 0
+
+
 class Router(core.RouterInterface):
 
     def __init__(self):
@@ -120,10 +130,23 @@ class Router(core.RouterInterface):
         if include_self:
             self.register_module(pattern, package, **kwargs)
     
-    def register_module(self, pattern, module, reload=False, **kwargs):
+    def register_module(self, pattern, module, **kwargs):
         if isinstance(module, str):
             module = __import__(module, fromlist=['hack'])
-        self.register(pattern, ModuleRouter(module, reload=reload), **kwargs)
+            
+        router = self.__class__()
+        self.register(pattern, router)
+        
+        routes = [x for x in module.__dict__.itervalues() if hasattr(x, '__route_args__')]
+        routes.sort(key=lambda x: x.__route_args__)
+        for func in routes:
+            _, sub_pattern, sub_kwargs = func.__route_args__
+            log.info('discovered %r via %r, %r' % (func, sub_pattern, sub_kwargs))
+            router.register(sub_pattern, func, **sub_kwargs)
+            
+        default = getattr(module, '__app__', None)
+        if default:
+            router.register(None, default, **kwargs)
     
     def route_step(self, path):
         for _, pattern, node in self._apps:
@@ -153,55 +176,5 @@ class Router(core.RouterInterface):
                 )
 
 
-class ModuleRouter(core.RouterInterface):
 
-    def __init__(self, module, reload=False, autoscan=True):
-        self.module = module
-        self.reload = reload
-        self._last_mtime = self.getmtime()
-        self._scanned = False
-        if autoscan:
-            self._assert_scanned()
-    
-    def getmtime(self):
-        return os.path.getmtime(self.module.__file__)
-
-    def _assert_scanned(self):
-        if False and self.reload:
-            mtime = self.getmtime()
-            if self._last_mtime != mtime:
-                self._last_mtime = mtime
-                self._app = None
-                # log.debug('reloading module %r' % self.module.__name__)
-                reload(self.module)
-                self._scanned = False
-        if not self._scanned:
-            self._scanned = True
-            self._app = getattr(self.module, '__app__', None)
-    
-    def children(self):
-        self._assert_scanned()
-        if not self._app:
-            return []
-        return [(False, None, self._app)]
-    
-    def route_step(self, path):
-        self._assert_scanned()
-        if not self._app:
-            return
-        yield core.RouteStep(
-            head=self._app,
-            router=self,
-            consumed='',
-            unrouted=path,
-        )
-
-    def generate_step(self, data): 
-        self._assert_scanned()
-        if not self._app:
-            return
-        yield core.GenerateStep(segment='', head=self._app)
-
-    def __repr__(self):
-        return '<%s of %r>' % (self.__class__.__name__, self.module.__name__)
 
