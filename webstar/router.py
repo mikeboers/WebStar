@@ -16,12 +16,13 @@ log = logging.getLogger(__name__)
 
 
 # Decorator for tagging routes in modules.
-def route(pattern, **kwargs):
-    def _route(func):
-        route._counter += 1
-        func.__route_args__ = (route._counter, pattern, kwargs)
-        return func
-    return _route
+def route(pattern, func=None, **kwargs):
+    if func is None:
+        return functools.partial(route, pattern, **kwargs)
+    route._counter += 1
+    func.__route_args__ = (route._counter, pattern, kwargs)
+    return func
+
 route._counter = 0
 
 
