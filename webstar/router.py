@@ -134,14 +134,19 @@ class Router(core.RouterInterface):
     def register_module(self, pattern, module, **kwargs):
         if isinstance(module, str):
             module = __import__(module, fromlist=['hack'])
-            
+        
+        # print repr(pattern), module.__name__
+
         router = module.__router__ = self.__class__()
         self.register(pattern, router, defaults=dict(__module__=module))
         
         routes = [x for x in module.__dict__.itervalues() if hasattr(x, '__route_args__')]
         routes.sort(key=lambda x: x.__route_args__)
         for func in routes:
-            _, sub_pattern, sub_kwargs = func.__route_args__
+            try:
+                _, sub_pattern, sub_kwargs = func.__route_args__
+            except TypeError:
+                continue
             router.register(sub_pattern, func, **sub_kwargs)
             
         default = getattr(module, '__app__', None)
