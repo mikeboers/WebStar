@@ -20,7 +20,7 @@ def route(pattern, func=None, **kwargs):
     if func is None:
         return functools.partial(route, pattern, **kwargs)
     route._counter += 1
-    func.__route_args__ = (route._counter, pattern, kwargs)
+    func.__dict__.setdefault('__route_args__', []).append((route._counter, pattern, func, kwargs))
     return func
 
 route._counter = 0
@@ -140,11 +140,15 @@ class Router(core.RouterInterface):
         router = module.__router__ = self.__class__()
         self.register(pattern, router, defaults=dict(__module__=module))
         
-        routes = [x for x in module.__dict__.itervalues() if hasattr(x, '__route_args__')]
-        routes.sort(key=lambda x: x.__route_args__)
-        for func in routes:
+        args = []
+        for func in module.__dict__.itervalues():
+            if not hasattr(func, '__route_args__'):
+                continue
+            args.extend(func.__route_args__)
+        args.sort()
+        for arg_set in args:
             try:
-                _, sub_pattern, sub_kwargs = func.__route_args__
+                _, sub_pattern, func, sub_kwargs = arg_set
             except TypeError:
                 continue
             router.register(sub_pattern, func, **sub_kwargs)
