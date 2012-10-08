@@ -6,7 +6,7 @@ setup(
     
     url="http://github.com/mikeboers/webstar",
     
-    packages = find_packages(),
+    packages=find_packages(),
     
     author="Mike Boers",
     author_email="webstar@mikeboers.com",
